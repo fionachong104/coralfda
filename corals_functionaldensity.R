@@ -3,9 +3,9 @@ library(fda)
 library(robCompositions)
 
 #import data
-oneyeardf <- read.csv("C:/Users/624225/Box/PhD/coralfda/oneyeardb.csv", 
+oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
-axisscores <- read.csv("C:/Users/624225/Box/PhD/coralfda/axisscores.csv", 
+axisscores <- read.csv("axisscores.csv", 
                        row.names=1)
 axisscores <- axisscores[order(axisscores$Site), ]
 
