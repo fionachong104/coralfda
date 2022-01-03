@@ -73,7 +73,8 @@ for(i in 1:nsites){
 }
 
 # ZB-spline basis evaluated on the grid "t.fine"
-t.fine <- seq(from = min(knots), to = max(knots),length.out = 1000)
+nt.fine <- 1000
+t.fine <- seq(from = min(knots), to = max(knots),length.out = nt.fine)
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 # Compute estimation of B matrix by using command lm
@@ -113,3 +114,34 @@ for (i in 1:nsites){
   plot(t.fine, smoothedobservations[,i], type = "l", main = sites[i])
   lines(t.fine, y_pred.l[,i], col="blue")
 }
+
+# Bootstrap
+# functional residuals
+residua  <- smoothedobservations - y_pred.l 
+
+# compute bootstrap response Y_boot, R bootstrap repetitions
+R <- 1000  
+
+betaboot <- array(dim = c(3, nt.fine, R))
+
+# generate new dataset, fit model to new dataset, keeping coefs
+for (i in 1:R){
+  j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
+  yboot <- t(y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
+  betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
+}
+par(mfrow = c(1,1))
+matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
+        xlab = "log coral areas", ylab = "clr of intercept")
+lines(t.fine, comp.spline.clr[,1])
+abline(a = 0, b = 0, lty = "dashed")
+
+matplot(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid", 
+        xlab = "log coral areas", ylab = "clr of first axis scores")
+lines(t.fine, comp.spline.clr[,2], col = "red")
+abline(a = 0, b = 0, lty = "dashed")
+
+matplot(t.fine, betaboot[3,,], col = "grey", type = "l", lty = "solid", 
+        xlab = "log coral areas", ylab = "clr of second axis scores")
+lines(t.fine, comp.spline.clr[,3], col = "blue")
+abline(a = 0, b = 0, lty = "dashed")
