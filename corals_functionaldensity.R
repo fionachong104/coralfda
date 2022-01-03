@@ -2,6 +2,15 @@ rm(list = ls())
 library(fda)
 library(robCompositions)
 
+# make polygon
+makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the array is number of values of t.fine 
+                                    # and number of bootstrap iterations, t.fine is x values for polygon
+  q025 <- apply(y, 1, "quantile", 0.025)
+  q975 <- apply(y, 1, "quantile", 0.975)
+  polygon(c(t.fine, rev(t.fine)), c(q025,rev(q975)), col = adjustcolor("grey", alpha.f = 0.2), 
+          border = NA)
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
@@ -131,17 +140,34 @@ for (i in 1:R){
   betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
 }
 par(mfrow = c(1,1))
-matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
-        xlab = "log coral areas", ylab = "clr of intercept")
+plot(range(t.fine),range(betaboot[1,,]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
+makepolygon95(y = betaboot[1,,], t.fine = t.fine)
 lines(t.fine, comp.spline.clr[,1])
 abline(a = 0, b = 0, lty = "dashed")
 
-matplot(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid", 
-        xlab = "log coral areas", ylab = "clr of first axis scores")
-lines(t.fine, comp.spline.clr[,2], col = "red")
+plot(range(t.fine),range(betaboot[2,,]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
+makepolygon95(y = betaboot[2,,], t.fine = t.fine)
+lines(t.fine, comp.spline.clr[,2])
+abline(a = 0, b = 0, lty = "dashed")
+# 
+# matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
+
+plot(range(t.fine),range(betaboot[3,,]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
+makepolygon95(y = betaboot[3,,], t.fine = t.fine)
+lines(t.fine, comp.spline.clr[,3])
 abline(a = 0, b = 0, lty = "dashed")
 
-matplot(t.fine, betaboot[3,,], col = "grey", type = "l", lty = "solid", 
-        xlab = "log coral areas", ylab = "clr of second axis scores")
-lines(t.fine, comp.spline.clr[,3], col = "blue")
-abline(a = 0, b = 0, lty = "dashed")
+# matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
+#         xlab = "log coral areas", ylab = "clr of intercept")
+# lines(t.fine, comp.spline.clr[,1])
+# abline(a = 0, b = 0, lty = "dashed")
+# 
+# matplot(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid", 
+#         xlab = "log coral areas", ylab = "clr of first axis scores")
+# lines(t.fine, comp.spline.clr[,2], col = "red")
+# abline(a = 0, b = 0, lty = "dashed")
+# 
+# matplot(t.fine, betaboot[3,,], col = "grey", type = "l", lty = "solid", 
+#         xlab = "log coral areas", ylab = "clr of second axis scores")
+# lines(t.fine, comp.spline.clr[,3], col = "blue")
+# abline(a = 0, b = 0, lty = "dashed")
