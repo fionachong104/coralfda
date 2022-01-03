@@ -3,9 +3,9 @@ library(fda)
 library(robCompositions)
 
 #import data
-oneyeardf <- read.csv("C:/Users/624225/Box/PhD/coralfda/oneyeardb.csv", 
+oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
-axisscores <- read.csv("C:/Users/624225/Box/PhD/coralfda/axisscores.csv", 
+axisscores <- read.csv("axisscores.csv", 
                        row.names=1)
 axisscores <- axisscores[order(axisscores$Site), ]
 
@@ -49,7 +49,16 @@ order <- 3
 par(mfrow = c(1,1))
 # make matrix for coef
 coef <- matrix(nrow = nsites, ncol = nknots)
+nalpha <- 10
+alphas <- seq(from = 0.01, to = 1, length.out = nalpha)
+gcv <- array(dim = c(nsites, nalpha))
 for (i in 1:nsites){
+  for(j in 1:nalpha){#try out different values of smoothing parameter
+    cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
+                                   knots = knots, w = weights, order = order, der = 1, alpha = alphas[i],                                    spline.plot = TRUE, basis.plot = TRUE)
+    gcv[i, j] <- cspline$GCV #generalized cross-validation score
+    
+  }
   cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
               knots = knots, w = weights, order = order, der = 1, alpha = 0.9, 
               spline.plot = TRUE, basis.plot = TRUE)
