@@ -11,9 +11,9 @@ oneyeardf <- read.csv("C:/Users/624225/Box/PhD/coralfda/oneyeardb.csv",
 axisscores <- read.csv("C:/Users/624225/Box/PhD/coralfda/axisscores.csv", 
                        row.names=1)
 
-axisscores <- as.numeric(axisscores[,1])
+axisscores <- as.numeric(axisscores[,2])
 
-#area or logarea?
+#area or logarea
 SortedArea <- sort(oneyeardf$Area)
 
  #from description on p. 75
