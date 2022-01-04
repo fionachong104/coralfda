@@ -7,7 +7,26 @@ makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the 
                                     # and number of bootstrap iterations, t.fine is x values for polygon
   q025 <- apply(y, 1, "quantile", 0.025)
   q975 <- apply(y, 1, "quantile", 0.975)
-  polygon(c(t.fine, rev(t.fine)), c(q025,rev(q975)), col = adjustcolor("grey", alpha.f = 0.2), 
+  polygon(c(t.fine, rev(t.fine)), c(q025,rev(q975)), col = adjustcolor("green", alpha.f = 0.1), 
+          border = NA)
+}
+
+#construct approximate 95% confidence band using asymptotic Gaussian approximation
+#Arguments:
+#splinemodel: an lm object used to estimate coefficients of ZB-splines
+#Z: the ZB-spline basis evaluated at points in t.fine
+#i: indices in vcov(splinemodel) of the variable we want (check the row names of vcov(splinemodel to get these))
+#t.fine: points at which to evaluate function
+#f: estimated values of function
+#Value: draws a polygon representing approximate 95% confidence band around f at the points in t.fine
+make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
+  Omegafull <- vcov(splinemodel)
+  Omega <- Omegafull[i, i]
+  V <- Z %*% Omega %*% t(Z)
+  se <- sqrt(diag(V))
+  clow <- f - 1.96 * se
+  chigh <- f + 1.96 * se
+  polygon(c(t.fine, rev(t.fine)), c(clow, rev(chigh)), col = adjustcolor("red", alpha.f = 0.1), 
           border = NA)
 }
 
@@ -140,22 +159,27 @@ for (i in 1:R){
   betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
 }
 par(mfrow = c(1,1))
-plot(range(t.fine),range(betaboot[1,,]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
-makepolygon95(y = betaboot[1,,], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[,1])
+plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
+makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
+lines(t.fine, comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
+make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(1, 4, 7, 10, 13), t.fine = t.fine, f = comp.spline.clr[, 1])
 
-plot(range(t.fine),range(betaboot[2,,]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
-makepolygon95(y = betaboot[2,,], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[,2])
+plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
+makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
+lines(t.fine, comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
+make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(2, 5, 8, 11, 14), t.fine = t.fine, f = comp.spline.clr[, 2])
+
 # 
 # matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
 
-plot(range(t.fine),range(betaboot[3,,]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
-makepolygon95(y = betaboot[3,,], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[,3])
+plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
+makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
+lines(t.fine, comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
+make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15), t.fine = t.fine, f = comp.spline.clr[, 3])
+
 
 # matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
 #         xlab = "log coral areas", ylab = "clr of intercept")
