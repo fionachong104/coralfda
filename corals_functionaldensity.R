@@ -33,6 +33,7 @@ make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
+oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
 axisscores <- read.csv("axisscores.csv", 
                        row.names=1)
 axisscores <- axisscores[order(axisscores$Site), ]
