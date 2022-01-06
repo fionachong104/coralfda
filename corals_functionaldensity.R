@@ -38,9 +38,18 @@ axisscores <- read.csv("axisscores.csv",
 axisscores <- axisscores[order(axisscores$Site), ]
 
 
-nclasses <- 10
+
 sites <- sort(unique(oneyeardf$Site))
 nsites <- length(sites)
+
+# check how many histogram bins are used, as per Sturges rule
+
+for (i in sites){
+  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site==i])
+  print(c(i, nc))
+}
+
+nclasses <- 9 # this might need changing later as data changes
 
 breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), 
               length.out = nclasses + 1)
@@ -195,3 +204,4 @@ make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15
 #         xlab = "log coral areas", ylab = "clr of second axis scores")
 # lines(t.fine, comp.spline.clr[,3], col = "blue")
 # abline(a = 0, b = 0, lty = "dashed")
+
