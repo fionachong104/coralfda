@@ -207,7 +207,7 @@ make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15
 # abline(a = 0, b = 0, lty = "dashed")
 
 #compute pointwise and global R^2
-mean.l <- apply(y_pred.l, 1, "mean")
+mean.l <- apply(smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
 SSE <- rowSums((smoothedobservations - y_pred.l)^2)
 SST <- rowSums((smoothedobservations - mean.l)^2)
 SSF <- rowSums((y_pred.l - mean.l)^2)
