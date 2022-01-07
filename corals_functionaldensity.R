@@ -206,3 +206,10 @@ make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15
 # lines(t.fine, comp.spline.clr[,3], col = "blue")
 # abline(a = 0, b = 0, lty = "dashed")
 
+#compute pointwise and global R^2
+mean.l <- apply(y_pred.l, 1, "mean")
+SSE <- rowSums((smoothedobservations - y_pred.l)^2)
+SST <- rowSums((smoothedobservations - mean.l)^2)
+SSF <- rowSums((y_pred.l - mean.l)^2)
+R.t <- SSF / SST #pointwise R^2
+plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~R^2)), ylim = c(0, 1), type = "l")
