@@ -237,3 +237,4 @@ for(i in 1:nsites){
 }
 R2global <- SSF.norm / SST.norm
 print(paste("global R^2:", R2global, sep = " "))
+legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
