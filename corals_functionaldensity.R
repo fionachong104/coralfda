@@ -124,6 +124,7 @@ for(i in 1:nsites){
 # ZB-spline basis evaluated on the grid "t.fine"
 nt.fine <- 1000
 t.fine <- seq(from = min(knots), to = max(knots),length.out = nt.fine)
+t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 # Compute estimation of B matrix by using command lm
@@ -224,3 +225,15 @@ SST <- rowSums((smoothedobservations - mean.l)^2)
 SSF <- rowSums((y_pred.l - mean.l)^2)
 R.t <- SSF / SST #pointwise R^2
 plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~R^2)), ylim = c(0, 1), type = "l")
+
+SST.norm <- 0
+SSF.norm <- 0
+for(i in 1:nsites){
+  ssf <- trapzc(t_step, (smoothedobservations[, i] - mean.l)^2)
+  SST.norm <- SST.norm + ssf
+  sst <- trapzc(t_step, (y_pred.l[, i] - mean.l)^2)
+  print(c(ssf, sst))
+  SSF.norm <- SSF.norm + sst
+}
+R2global <- SSF.norm / SST.norm
+print(paste("global R^2:", R2global, sep = " "))
