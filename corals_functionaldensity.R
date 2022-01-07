@@ -229,11 +229,8 @@ plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", 
 SST.norm <- 0
 SSF.norm <- 0
 for(i in 1:nsites){
-  ssf <- trapzc(t_step, (smoothedobservations[, i] - mean.l)^2)
-  SST.norm <- SST.norm + ssf
-  sst <- trapzc(t_step, (y_pred.l[, i] - mean.l)^2)
-  print(c(ssf, sst))
-  SSF.norm <- SSF.norm + sst
+  SST.norm <- SST.norm + trapzc(t_step, (smoothedobservations[, i] - mean.l)^2)
+  SSF.norm <- SSF.norm + trapzc(t_step, (y_pred.l[, i] - mean.l)^2)
 }
 R2global <- SSF.norm / SST.norm
 print(paste("global R^2:", R2global, sep = " "))
