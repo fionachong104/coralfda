@@ -30,6 +30,17 @@ make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
           border = NA)
 }
 
+# Numerical integration via trapezoidal formula (on a regular grid)
+#copied from code suppied with Talska et al. 2018
+#Arguments: 
+#step: step size for grid
+#y: function to be integrated, evaluated at the grid points
+#Value: the value of the required integral
+trapzc <- function(step, y) 
+{
+  return(step * (0.5 * y[1] + sum(y[2:(length(y) - 1)]) + 0.5 * y[length(y)]))
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
