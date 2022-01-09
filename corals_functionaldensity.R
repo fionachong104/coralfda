@@ -278,8 +278,9 @@ print(paste("global R^2:", R2global, sep = " "))
 legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
 
 #permutation F-test
-Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = 0.05)
+alpha <- 0.05
+Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = alpha)
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))))
-lines(t.fine, Ftest$Fcrit, lty = "dashed")
-abline(h = Ftest$Fmaxcrit, lty = "dotted")
-legend("topright", bty = "n", lty = c("solid", "dashed", "dotted"), legend = c("observed", "pointwise critical value", "maximum critical value"))
+lines(t.fine, Ftest$Fcrit, lty = "dotted")
+abline(h = Ftest$Fmaxcrit, lty = "dashed")
+legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(alpha), " critical value"))), as.expression(bquote(paste("maximum ", .(alpha), " critical value")))))
