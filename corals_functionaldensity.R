@@ -63,6 +63,9 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fperm: array (nperm x number of values of t.fine): distribution of pointwise functional F statistics when observations permuted
 #Fobs: vector (length number of values of t.fine): observed pointwise functional F statistics
 #Fcrit vector (length number of values of t.fine): (1 - alpha) quantile of distribution of pointwise functional F statistics when observations permuted
+#Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
+#Fmaxobs: scalar, max observed value of F(t)
+#Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
 functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05){
   Fobs <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l) #observed vector of pointwise functional F statistics
   N <- dim(smoothedobservations)[2]
@@ -73,7 +76,10 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
     Fperm[i, ] <- Ft(smoothedobservations = smoothedobservations[, iperm], y_pred.l = y_pred.l) #permuted observations: note that numerator won't change, and we just need to permute the smoothed clr observations to get the permuted value of the pointwise functional F statistics
   }
   Fcrit <- apply(Fperm, 2, "quantile", 1 - alpha)
-  return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit))
+  Fmaxobs <- max(Fobs) #observed max(F(t))
+  Fmaxperm <- apply(Fperm, 1, "max") #max(F(t)) in each permutation
+  Fmaxcrit <- quantile(Fmaxperm, 1 - alpha)
+  return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
 }
 
 #import data
@@ -275,4 +281,5 @@ legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round
 Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = 0.05)
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))))
 lines(t.fine, Ftest$Fcrit, lty = "dashed")
-legend("topright", bty = "n", lty = c("solid", "dashed"), legend = c("observed", "pointwise critical value"))
+abline(h = Ftest$Fmaxcrit, lty = "dotted")
+legend("topright", bty = "n", lty = c("solid", "dashed", "dotted"), legend = c("observed", "pointwise critical value", "maximum critical value"))
