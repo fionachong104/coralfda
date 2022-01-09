@@ -41,6 +41,41 @@ trapzc <- function(step, y)
   return(step * (0.5 * y[1] + sum(y[2:(length(y) - 1)]) + 0.5 * y[length(y)]))
 }
 
+#functional F statistic as in Ramsay et al. 2009, Functional Data Analysis with R and Matlab, p. 168, eq. 10.20
+#Arguments:
+#smoothedobservations (array, number of values of t.fine x number of observations): smoothed clr observations
+#y_pred.l (array, number of values of t.fine x number of observations): predicted clr observations
+#Value: functional F statistic vector (length is number of values of t.fine)
+Ft <- function(smoothedobservations, y_pred.l){
+  Fnum <- apply(y_pred.l, 1, "var")
+  n <- dim(smoothedobservations)[2]
+  Fdenom <- 1 / n * rowSums((smoothedobservations - y_pred.l)^2)
+  return(Fnum / Fdenom)
+}
+
+#functional F permutation test as in Ramsay et al. 2009, Functional Data Analysis with R and Matlab, p. 168
+#Arguments:
+#smoothedobservations (array, number of values of t.fine x number of observations): smoothed clr observations
+#y_pred.l (array, number of values of t.fine x number of observations): predicted clr observations
+#nperm: number of permutations (default 1e3)
+#alpha: size of test (default 0.05)
+#Value: list containing
+#Fperm: array (nperm x number of values of t.fine): distribution of pointwise functional F statistics when observations permuted
+#Fobs: vector (length number of values of t.fine): observed pointwise functional F statistics
+#Fcrit vector (length number of values of t.fine): (1 - alpha) quantile of distribution of pointwise functional F statistics when observations permuted
+functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05){
+  Fobs <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l) #observed vector of pointwise functional F statistics
+  N <- dim(smoothedobservations)[2]
+  nt <- dim(smoothedobservations)[1]
+  Fperm <- array(dim = c(nperm, nt))
+  for(i in 1:nperm){
+    iperm <- sample(1:N, replace = FALSE)
+    Fperm[i, ] <- Ft(smoothedobservations = smoothedobservations[, iperm], y_pred.l = y_pred.l) #permuted observations: note that numerator won't change, and we just need to permute the smoothed clr observations to get the permuted value of the pointwise functional F statistics
+  }
+  Fcrit <- apply(Fperm, 2, "quantile", 1 - alpha)
+  return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit))
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
@@ -224,7 +259,7 @@ SSE <- rowSums((smoothedobservations - y_pred.l)^2)
 SST <- rowSums((smoothedobservations - mean.l)^2)
 SSF <- rowSums((y_pred.l - mean.l)^2)
 R.t <- SSF / SST #pointwise R^2
-plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~R^2)), ylim = c(0, 1), type = "l")
+plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l")
 
 SST.norm <- 0
 SSF.norm <- 0
@@ -235,3 +270,9 @@ for(i in 1:nsites){
 R2global <- SSF.norm / SST.norm
 print(paste("global R^2:", R2global, sep = " "))
 legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
+
+#permutation F-test
+Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = 0.05)
+plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))))
+lines(t.fine, Ftest$Fcrit, lty = "dashed")
+legend("topright", bty = "n", lty = c("solid", "dashed"), legend = c("observed", "pointwise critical value"))
