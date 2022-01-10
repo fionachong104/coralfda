@@ -82,6 +82,24 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
   return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
 }
 
+fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
+  splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
+  B <-  coef(splinemodel)  
+  comp.spline.clr <- ZB_base %*% t(B)
+  y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
+  for (i in 1:nsites){ 
+    y_pred.l[, i] <- comp.spline.clr[, 1] + comp.spline.clr[, 2] * axisscores$areax[i]
+    + comp.spline.clr[, 3] * axisscores$areay[i]
+  }
+  
+  #X <- as.matrix(cbind(rep(1, nsites), axisscores[, 2:3])) #matrix version NOT RIGHT?
+  #y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
+  
+  smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
+  F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
+  return(list(y_pred.l = y_pred.l, smoothedobservations = smoothedobservations, F = F))
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
