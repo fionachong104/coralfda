@@ -66,14 +66,18 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
-functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05){
-  Fobs <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l) #observed vector of pointwise functional F statistics
+functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05, coef, axisscores, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
+  
+  #  Fobs <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l) #observed vector of pointwise functional F statistics
+  Fobs <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
   Fperm <- array(dim = c(nperm, nt))
   for(i in 1:nperm){
     iperm <- sample(1:N, replace = FALSE)
-    Fperm[i, ] <- Ft(smoothedobservations = smoothedobservations[, iperm], y_pred.l = y_pred.l) #permuted observations: note that numerator won't change, and we just need to permute the smoothed clr observations to get the permuted value of the pointwise functional F statistics
+    permutedmodel <- fitZBmodel(coef = coef[iperm, ], axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
+    Fperm[i, ] <- permutedmodel$F
+#    Fperm[i, ] <- Ft(smoothedobservations = smoothedobservations[, iperm], y_pred.l = y_pred.l) #permuted observations: note that numerator won't change, and we just need to permute the smoothed clr observations to get the permuted value of the pointwise functional F statistics
   }
   Fcrit <- apply(Fperm, 2, "quantile", 1 - alpha)
   Fmaxobs <- max(Fobs) #observed max(F(t))
@@ -297,8 +301,8 @@ legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round
 
 #permutation F-test
 alpha <- 0.05
-Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = alpha)
-plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))))
+Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = alpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(alpha), " critical value"))), as.expression(bquote(paste("maximum ", .(alpha), " critical value")))))
