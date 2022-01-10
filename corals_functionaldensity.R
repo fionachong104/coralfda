@@ -83,6 +83,21 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
   return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
 }
 
+#fit a ZB-spline model
+#Arguments:
+#coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
+#axisscores: data frame, variables Site, areax, areay (second and third columns are explanatory variables)
+#ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
+#nsites: number of sites
+#t.fine: vector, values of log colony area at which to evaluate splines
+#Value:
+#list containing:
+#y_pred.l: matrix (points in t.fine x sites) of clr predictions
+#smoothedobservations: matrix (points in t.fine x sites) of clr smoothed observations
+#F: vector of pointwise F statistics
+#comp.spline.clr: matrix (points in t.fine x 3) of coefficient functions (intercept, areax, areay)
+#B: matrix (3 x dimension of spline space) of regression coefficients
+#splinemodel: fitted lm object
 fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
   splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
   B <-  coef(splinemodel)  
@@ -189,37 +204,15 @@ ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 
-# Compute estimation of B matrix by using command lm
-#splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
-#B <-  coef(splinemodel)
-#beta.fd <- fd(t(B), ZB_base)
-
-#comp.spline.clr <- ZB_base %*% t(B)
-
 plot(t.fine, fittedsplinemodel$comp.spline.clr[,1], type = "l")
 lines(t.fine, fittedsplinemodel$comp.spline.clr[,2], col = "red")
 lines(t.fine, fittedsplinemodel$comp.spline.clr[,3], col = "blue")
 abline(a = 0, b = 0, lty = "dashed")
 
-# interpretation of betas 
-#y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
-#for (i in 1:nsites){
-#  y_pred.l[,i] <- comp.spline.clr[,1] + comp.spline.clr[,2] * axisscores$areax[i]
-#                 + comp.spline.clr[,3] * axisscores$areay[i]
-#}
-
-# y_pred = NULL
-# for (i in 1:length(weight.l)){
-#   y_pred = cbind(y_pred, clr2density(t.fine,t_step,y_pred.l[,i]))
-# }
-
 plot(t.fine, fittedsplinemodel$y_pred.l[,1], type = "l")
 for (i in 2:nsites){
   lines(t.fine, fittedsplinemodel$y_pred.l[,i])
 }
-
-# smoothed clr observations
-#smoothedobservations <- ZB_base %*% t(coef)
 
 par(mfrow=c(3,6))
 for (i in 1:nsites){
