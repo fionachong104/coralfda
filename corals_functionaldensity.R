@@ -102,11 +102,6 @@ fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
   splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
   B <-  coef(splinemodel)  
   comp.spline.clr <- ZB_base %*% t(B)
-  #y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
-  #for (i in 1:nsites){ 
-  #  y_pred.l[, i] <- comp.spline.clr[, 1] + comp.spline.clr[, 2] * axisscores$areax[i] + comp.spline.clr[, 3] * axisscores$areay[i]
-  #}
-  
   X <- as.matrix(cbind(rep(1, nsites), axisscores[, 2:3]))
   y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
   smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
@@ -291,7 +286,7 @@ legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round
 
 #permutation F-test
 alpha <- 0.05
-#Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, alpha = alpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, alpha = alpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
