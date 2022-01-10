@@ -117,6 +117,8 @@ axisscores <- read.csv("axisscores.csv",
                        row.names=1)
 axisscores <- axisscores[order(axisscores$Site), ]
 
+# pcascores <- read.csv("pcascores.csv") # calling PCA scores from all environmental variables
+# pcascores <- pcascores[order(pcascores$Site), ]
 
 
 sites <- sort(unique(oneyeardf$Site))
