@@ -66,14 +66,15 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
-functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05){
-  Fobs <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l) #observed vector of pointwise functional F statistics
+functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05, coef, axisscores, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
+  Fobs <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
   Fperm <- array(dim = c(nperm, nt))
   for(i in 1:nperm){
     iperm <- sample(1:N, replace = FALSE)
-    Fperm[i, ] <- Ft(smoothedobservations = smoothedobservations[, iperm], y_pred.l = y_pred.l) #permuted observations: note that numerator won't change, and we just need to permute the smoothed clr observations to get the permuted value of the pointwise functional F statistics
+    permutedmodel <- fitZBmodel(coef = coef[iperm, ], axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
+    Fperm[i, ] <- permutedmodel$F
   }
   Fcrit <- apply(Fperm, 2, "quantile", 1 - alpha)
   Fmaxobs <- max(Fobs) #observed max(F(t))
@@ -82,15 +83,46 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
   return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
 }
 
+#fit a ZB-spline model
+#Arguments:
+#coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
+#axisscores: data frame, variables Site, areax, areay (second and third columns are explanatory variables)
+#ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
+#nsites: number of sites
+#t.fine: vector, values of log colony area at which to evaluate splines
+#Value:
+#list containing:
+#y_pred.l: matrix (points in t.fine x sites) of clr predictions
+#smoothedobservations: matrix (points in t.fine x sites) of clr smoothed observations
+#F: vector of pointwise F statistics
+#comp.spline.clr: matrix (points in t.fine x 3) of coefficient functions (intercept, areax, areay)
+#B: matrix (3 x dimension of spline space) of regression coefficients
+#splinemodel: fitted lm object
+fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
+  splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
+  B <-  coef(splinemodel)  
+  comp.spline.clr <- ZB_base %*% t(B)
+  y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
+  for (i in 1:nsites){ 
+    y_pred.l[, i] <- comp.spline.clr[, 1] + comp.spline.clr[, 2] * axisscores$areax[i]
+    + comp.spline.clr[, 3] * axisscores$areay[i]
+  }
+  
+  #X <- as.matrix(cbind(rep(1, nsites), axisscores[, 2:3])) #matrix version NOT RIGHT?
+  #y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
+  
+  smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
+  F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
+  return(list(y_pred.l = y_pred.l, smoothedobservations = smoothedobservations, F = F, comp.spline.clr = comp.spline.clr, B = B, splinemodel = splinemodel))
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
 oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
-# axisscores <- read.csv("axisscores.csv", 
-#                        row.names=1)
-# axisscores <- axisscores[order(axisscores$Site), ]
-pcascores <- read.csv("pcascores.csv")   # PCA scores with all environmental variables 
-pcascores <- pcascores[order(pcascores$Site), ]
+axisscores <- read.csv("axisscores.csv", 
+                       row.names=1)
+axisscores <- axisscores[order(axisscores$Site), ]
 
 
 
@@ -170,47 +202,27 @@ t.fine <- seq(from = min(knots), to = max(knots),length.out = nt.fine)
 t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
-# Compute estimation of B matrix by using command lm
-splinemodel <- lm(coef ~ pcascores$Comp.1 + pcascores$Comp.2)
-B <-  coef(splinemodel)
-#beta.fd <- fd(t(B), ZB_base)
+fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 
-comp.spline.clr <- ZB_base %*% t(B)
-
-plot(t.fine, comp.spline.clr[,1], type = "l")
-lines(t.fine, comp.spline.clr[,2], col = "red")
-lines(t.fine, comp.spline.clr[,3], col = "blue")
+plot(t.fine, fittedsplinemodel$comp.spline.clr[,1], type = "l")
+lines(t.fine, fittedsplinemodel$comp.spline.clr[,2], col = "red")
+lines(t.fine, fittedsplinemodel$comp.spline.clr[,3], col = "blue")
 abline(a = 0, b = 0, lty = "dashed")
 
-# interpretation of betas 
-y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
-for (i in 1:nsites){
-  y_pred.l[,i] <- comp.spline.clr[,1] + comp.spline.clr[,2] * pcascores$Comp.1[i]
-                 + comp.spline.clr[,3] * pcascores$Comp.2[i]
-}
-
-# y_pred = NULL
-# for (i in 1:length(weight.l)){
-#   y_pred = cbind(y_pred, clr2density(t.fine,t_step,y_pred.l[,i]))
-# }
-
-plot(t.fine, y_pred.l[,1], type = "l")
+plot(t.fine, fittedsplinemodel$y_pred.l[,1], type = "l")
 for (i in 2:nsites){
-  lines(t.fine, y_pred.l[,i])
+  lines(t.fine, fittedsplinemodel$y_pred.l[,i])
 }
-
-# smoothed clr observations
-smoothedobservations <- ZB_base %*% t(coef)
 
 par(mfrow=c(3,6))
 for (i in 1:nsites){
-  plot(t.fine, smoothedobservations[,i], type = "l", main = sites[i])
-  lines(t.fine, y_pred.l[,i], col="blue")
+  plot(t.fine, fittedsplinemodel$smoothedobservations[,i], type = "l", main = sites[i])
+  lines(t.fine, fittedsplinemodel$y_pred.l[,i], col="blue")
 }
 
 # Bootstrap
 # functional residuals
-residua  <- smoothedobservations - y_pred.l 
+residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
 
 # compute bootstrap response Y_boot, R bootstrap repetitions
 R <- 1000  
@@ -220,30 +232,30 @@ betaboot <- array(dim = c(3, nt.fine, R))
 # generate new dataset, fit model to new dataset, keeping coefs
 for (i in 1:R){
   j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
-  yboot <- t(y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-  betaboot[, , i] <- coef(lm(yboot ~ pcascores$Comp.1 + pcascores$Comp.2)) 
+  yboot <- t(fittedsplinemodel$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
+  betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
 }
 par(mfrow = c(1,1))
 plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
 makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[, 1])
+lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(1, 4, 7, 10, 13), t.fine = t.fine, f = comp.spline.clr[, 1])
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(1, 4, 7, 10, 13), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
-plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first pca scores" )
+plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
 makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[, 2])
+lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(2, 5, 8, 11, 14), t.fine = t.fine, f = comp.spline.clr[, 2])
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(2, 5, 8, 11, 14), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
 # 
 # matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
 
-plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second pca scores" )
+plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
 makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
-lines(t.fine, comp.spline.clr[, 3])
+lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15), t.fine = t.fine, f = comp.spline.clr[, 3])
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 
 
 # matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
@@ -262,18 +274,18 @@ make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15
 # abline(a = 0, b = 0, lty = "dashed")
 
 #compute pointwise and global R^2
-mean.l <- apply(smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
-SSE <- rowSums((smoothedobservations - y_pred.l)^2)
-SST <- rowSums((smoothedobservations - mean.l)^2)
-SSF <- rowSums((y_pred.l - mean.l)^2)
+mean.l <- apply(fittedsplinemodel$smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
+SSE <- rowSums((fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l)^2)
+SST <- rowSums((fittedsplinemodel$smoothedobservations - mean.l)^2)
+SSF <- rowSums((fittedsplinemodel$y_pred.l - mean.l)^2)
 R.t <- SSF / SST #pointwise R^2
 plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l")
 
 SST.norm <- 0
 SSF.norm <- 0
 for(i in 1:nsites){
-  SST.norm <- SST.norm + trapzc(t_step, (smoothedobservations[, i] - mean.l)^2)
-  SSF.norm <- SSF.norm + trapzc(t_step, (y_pred.l[, i] - mean.l)^2)
+  SST.norm <- SST.norm + trapzc(t_step, (fittedsplinemodel$smoothedobservations[, i] - mean.l)^2)
+  SSF.norm <- SSF.norm + trapzc(t_step, (fittedsplinemodel$y_pred.l[, i] - mean.l)^2)
 }
 R2global <- SSF.norm / SST.norm
 print(paste("global R^2:", R2global, sep = " "))
@@ -281,8 +293,8 @@ legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round
 
 #permutation F-test
 alpha <- 0.05
-Ftest <- functionalF(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l, nperm = 1e3, alpha = alpha)
-plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))))
+Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e3, alpha = alpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(alpha), " critical value"))), as.expression(bquote(paste("maximum ", .(alpha), " critical value")))))
