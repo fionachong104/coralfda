@@ -86,9 +86,11 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
 oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
-axisscores <- read.csv("axisscores.csv", 
-                       row.names=1)
-axisscores <- axisscores[order(axisscores$Site), ]
+# axisscores <- read.csv("axisscores.csv", 
+#                        row.names=1)
+# axisscores <- axisscores[order(axisscores$Site), ]
+pcascores <- read.csv("pcascores.csv")   # PCA scores with all environmental variables 
+pcascores <- pcascores[order(pcascores$Site), ]
 
 
 
@@ -169,7 +171,7 @@ t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 # Compute estimation of B matrix by using command lm
-splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
+splinemodel <- lm(coef ~ pcascores$Comp.1 + pcascores$Comp.2)
 B <-  coef(splinemodel)
 #beta.fd <- fd(t(B), ZB_base)
 
@@ -183,8 +185,8 @@ abline(a = 0, b = 0, lty = "dashed")
 # interpretation of betas 
 y_pred.l <- matrix(nrow = length(t.fine), ncol = nsites)
 for (i in 1:nsites){
-  y_pred.l[,i] <- comp.spline.clr[,1] + comp.spline.clr[,2] * axisscores$areax[i]
-                 + comp.spline.clr[,3] * axisscores$areay[i]
+  y_pred.l[,i] <- comp.spline.clr[,1] + comp.spline.clr[,2] * pcascores$Comp.1[i]
+                 + comp.spline.clr[,3] * pcascores$Comp.2[i]
 }
 
 # y_pred = NULL
@@ -219,7 +221,7 @@ betaboot <- array(dim = c(3, nt.fine, R))
 for (i in 1:R){
   j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
   yboot <- t(y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-  betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
+  betaboot[, , i] <- coef(lm(yboot ~ pcascores$Comp.1 + pcascores$Comp.2)) 
 }
 par(mfrow = c(1,1))
 plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
@@ -228,7 +230,7 @@ lines(t.fine, comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(1, 4, 7, 10, 13), t.fine = t.fine, f = comp.spline.clr[, 1])
 
-plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
+plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first pca scores" )
 makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
 lines(t.fine, comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
@@ -237,7 +239,7 @@ make_asymp_polygon(splinemodel = splinemodel, Z = ZB_base, i = c(2, 5, 8, 11, 14
 # 
 # matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
 
-plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
+plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second pca scores" )
 makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
 lines(t.fine, comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
