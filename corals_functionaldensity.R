@@ -86,7 +86,7 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
 #fit a ZB-spline model
 #Arguments:
 #coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
-#axisscores: data frame, variables Site, areax, areay (second and third columns are explanatory variables)
+#axisscores: data frame, variables Site, PC1, PC2 (second and third columns are explanatory variables)
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #nsites: number of sites
 #t.fine: vector, values of log colony area at which to evaluate splines
@@ -95,11 +95,11 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
 #y_pred.l: matrix (points in t.fine x sites) of clr predictions
 #smoothedobservations: matrix (points in t.fine x sites) of clr smoothed observations
 #F: vector of pointwise F statistics
-#comp.spline.clr: matrix (points in t.fine x 3) of coefficient functions (intercept, areax, areay)
+#comp.spline.clr: matrix (points in t.fine x 3) of coefficient functions (intercept, PC1, PC2)
 #B: matrix (3 x dimension of spline space) of regression coefficients
 #splinemodel: fitted lm object
 fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
-  splinemodel <- lm(coef ~ axisscores$areax + axisscores$areay)
+  splinemodel <- lm(coef ~ axisscores$PC1 + axisscores$PC2)
   B <-  coef(splinemodel)  
   comp.spline.clr <- ZB_base %*% t(B)
   X <- as.matrix(cbind(rep(1, nsites), axisscores[, 2:3]))
@@ -115,7 +115,7 @@ oneyeardf <- read.csv("oneyeardb.csv",
 oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
 axisscores <- read.csv("axisscores.csv", 
                        row.names=1)
-axisscores <- axisscores[order(axisscores$Site), ]
+axisscores <- axisscores[order(rownames(axisscores)), ]
 
 # pcascores <- read.csv("pcascores.csv") # calling PCA scores from all environmental variables
 # pcascores <- pcascores[order(pcascores$Site), ]
@@ -228,7 +228,7 @@ betaboot <- array(dim = c(3, nt.fine, R))
 for (i in 1:R){
   j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
   yboot <- t(fittedsplinemodel$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-  betaboot[, , i] <- coef(lm(yboot ~ axisscores$areax + axisscores$areay)) 
+  betaboot[, , i] <- coef(lm(yboot ~ axisscores$PC1 + axisscores$PC2)) 
 }
 par(mfrow = c(1,1))
 plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
