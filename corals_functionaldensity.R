@@ -86,7 +86,7 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
 #fit a ZB-spline model
 #Arguments:
 #coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
-#axisscores: data frame, variables Site, PC1, PC2 (second and third columns are explanatory variables)
+#axisscores: data frame, variables PC1, PC2 (second and third columns are explanatory variables)
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #nsites: number of sites
 #t.fine: vector, values of log colony area at which to evaluate splines
@@ -102,7 +102,7 @@ fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
   splinemodel <- lm(coef ~ axisscores$PC1 + axisscores$PC2)
   B <-  coef(splinemodel)  
   comp.spline.clr <- ZB_base %*% t(B)
-  X <- as.matrix(cbind(rep(1, nsites), axisscores[, 2:3]))
+  X <- as.matrix(cbind(rep(1, nsites), axisscores[, 1:2]))
   y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
   smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
   F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
