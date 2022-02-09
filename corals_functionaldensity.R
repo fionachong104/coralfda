@@ -157,17 +157,19 @@ t.raw <- sitedens$mids # assuming same classes for all sites
 clr.raw <- cenLR(dens.raw)$x.clr
 
 #compositional spline
-nknots <- 5
+g <- 3
+nknots <- g + 2
 knots <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea),
-             length.out = nknots) # five test values equally spaced
+             length.out = nknots) #g + 2 equally-spaced values
 
-weights <- rep(1,nclasses)
+weights <- rep(1, nclasses)
 
-order <- 3
+k <- 3 #2 is quadratic, 3 is cubic, etc
+order <- k + 1
 
-par(mfrow = c(1,1))
+par(mfrow = c(1, 1))
 # make matrix for coef
-coef <- matrix(nrow = nsites, ncol = nknots)
+coef <- matrix(nrow = nsites, ncol = g + k) #Machalova et al 2021, Theorem 1: dimension of the ZB-spline vector space is g + k
 
 nalpha <- 30
 alphas <- seq(from = 0.01, to = 1, length.out = nalpha)
@@ -186,14 +188,14 @@ for(i in 1:nsites){
 
 for(i in 1:nsites){
   cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
-              knots = knots, w = weights, order = order, der = 1, alpha = 0.9, 
+              knots = knots, w = weights, order = order, der = 1, alpha = 0.9, #still need to choose alpha properly based on the generalized cross-validation score above
               spline.plot = TRUE, basis.plot = TRUE)
   coef[i,] <- cspline$ZB_coef
 }
 
 # ZB-spline basis evaluated on the grid "t.fine"
 nt.fine <- 1000
-t.fine <- seq(from = min(knots), to = max(knots),length.out = nt.fine)
+t.fine <- seq(from = min(knots), to = max(knots), length.out = nt.fine)
 t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
