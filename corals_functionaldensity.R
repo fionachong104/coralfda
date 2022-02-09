@@ -237,13 +237,14 @@ plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas",
 makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(1, 4, 7, 10, 13), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
+coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
 plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
 makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(2, 5, 8, 11, 14), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
 # 
 # matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
@@ -252,7 +253,7 @@ plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas",
 makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = c(3, 6, 9, 12, 15), t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
+make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 
 
 # matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
