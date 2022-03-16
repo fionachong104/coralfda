@@ -58,7 +58,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #smoothedobservations (array, number of values of t.fine x number of observations): smoothed clr observations
 #y_pred.l (array, number of values of t.fine x number of observations): predicted clr observations
 #nperm: number of permutations (default 1e3)
-#alpha: size of test (default 0.05)
+#Falpha: size of test (default 0.05)
 #Value: list containing
 #Fperm: array (nperm x number of values of t.fine): distribution of pointwise functional F statistics when observations permuted
 #Fobs: vector (length number of values of t.fine): observed pointwise functional F statistics
@@ -66,7 +66,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
-functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.05, coef, axisscores, ZB_base, t.fine){
+functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, axisscores, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
   Fobs <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
@@ -76,10 +76,10 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, alpha = 0.0
     permutedmodel <- fitZBmodel(coef = coef[iperm, ], axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
     Fperm[i, ] <- permutedmodel$F
   }
-  Fcrit <- apply(Fperm, 2, "quantile", 1 - alpha)
+  Fcrit <- apply(Fperm, 2, "quantile", 1 - Falpha)
   Fmaxobs <- max(Fobs) #observed max(F(t))
   Fmaxperm <- apply(Fperm, 1, "max") #max(F(t)) in each permutation
-  Fmaxcrit <- quantile(Fmaxperm, 1 - alpha)
+  Fmaxcrit <- quantile(Fmaxperm, 1 - Falpha)
   return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
 }
 
@@ -177,7 +177,7 @@ gcv <- array(dim = c(nsites, nalpha))
 for (i in 1:nsites){
   for(j in 1:nalpha){#try out different values of smoothing parameter
     cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
-                                   knots = knots, w = weights, order = order, der = 1, alpha = alphas[j],                                    spline.plot = FALSE, basis.plot = FALSE)
+                                   knots = knots, w = weights, order = order, der = 1, alpha = alphas[j], spline.plot = FALSE, basis.plot = FALSE)
     gcv[i, j] <- cspline$GCV #generalized cross-validation score
   }
 }
@@ -188,7 +188,7 @@ for(i in 1:nsites){
 
 for(i in 1:nsites){
   cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
-              knots = knots, w = weights, order = order, der = 1, alpha = 0.9, #still need to choose alpha properly based on the generalized cross-validation score above
+              knots = knots, w = weights, order = order, der = 1, alpha = 1, #still need to choose alpha properly based on the generalized cross-validation score above
               spline.plot = TRUE, basis.plot = TRUE)
   coef[i,] <- cspline$ZB_coef
 }
@@ -211,37 +211,45 @@ for (i in 2:nsites){
   lines(t.fine, fittedsplinemodel$y_pred.l[,i])
 }
 
-par(mfrow=c(3,6))
+par(mfrow=c(4,5))
 for (i in 1:nsites){
   plot(t.fine, fittedsplinemodel$smoothedobservations[,i], type = "l", main = sites[i])
   lines(t.fine, fittedsplinemodel$y_pred.l[,i], col="blue")
 }
 
-# Bootstrap
-# functional residuals
-residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
+bootstrap <- FALSE
 
-# compute bootstrap response Y_boot, R bootstrap repetitions
-R <- 1000  
+  # Bootstrap
+  # functional residuals
+  residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
+  
+  # compute bootstrap response Y_boot, R bootstrap repetitions
+  R <- 1000  
+  
+  betaboot <- array(dim = c(3, nt.fine, R))
+  
+  # generate new dataset, fit model to new dataset, keeping coefs
+  for (i in 1:R){
+    j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
+    yboot <- t(fittedsplinemodel$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
+    betaboot[, , i] <- coef(lm(yboot ~ axisscores$PC1 + axisscores$PC2)) 
+  }
 
-betaboot <- array(dim = c(3, nt.fine, R))
 
-# generate new dataset, fit model to new dataset, keeping coefs
-for (i in 1:R){
-  j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
-  yboot <- t(fittedsplinemodel$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-  betaboot[, , i] <- coef(lm(yboot ~ axisscores$PC1 + axisscores$PC2)) 
-}
 par(mfrow = c(1,1))
 plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
-makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
+if(bootstrap){
+  makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
+}
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
 coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
 plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
-makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
+if(bootstrap){
+  makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
+}
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
@@ -250,7 +258,9 @@ make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i =
 # matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
 
 plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
-makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
+if(bootstrap){
+  makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
+}
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
@@ -290,9 +300,18 @@ print(paste("global R^2:", R2global, sep = " "))
 legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
 
 #permutation F-test
-alpha <- 0.05
-Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, alpha = alpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+Falpha <- 0.05
+Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+par(mfrow = c(1,1))
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
-legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(alpha), " critical value"))), as.expression(bquote(paste("maximum ", .(alpha), " critical value")))))
+legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
+
+# figure showing predicted size distributions with increasing PC1
+npc1 <- 10
+pc1grid <- seq(from = min(axisscores$PC1), to = max(axisscores$PC1), length.out = npc1)
+# pc1gridpred <- array(dim = c(npc1, nt.fine))
+Xgrid <- as.matrix(cbind(rep(1, npc1), pc1grid, rep(0,npc1)))
+pc1gridpred <- fittedsplinemodel$comp.spline.clr %*% t(Xgrid) #clr predictions on a grid of equally spaced PC1 scores from min to max, with PC2 = 0 (mean value)
+
