@@ -1,6 +1,7 @@
 rm(list = ls())
 library(fda)
 library(robCompositions)
+library(RColorBrewer)
 
 # make polygon
 makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the array is number of values of t.fine 
@@ -107,6 +108,19 @@ fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
   smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
   F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
   return(list(y_pred.l = y_pred.l, smoothedobservations = smoothedobservations, F = F, comp.spline.clr = comp.spline.clr, B = B, splinemodel = splinemodel))
+}
+
+# Inverse of clr transformation from Talska et al 2018
+# Input: z = grid of point defining the abscissa 
+#        z_step = step of the grid of the abscissa
+#        clr = grid evaluation of the clr transformed density
+# Output: grid evaluation of the density
+clr2density <- function(z, z_step, clr) 
+{
+  if(is.fd(clr))
+    return(exp(eval.fd(z,clr))/trapzc(z_step,exp(eval.fd(z,clr))))
+  if(!is.fd(clr))
+    return(exp(clr)/trapzc(z_step,exp(clr)))
 }
 
 #import data
@@ -311,7 +325,11 @@ legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("
 # figure showing predicted size distributions with increasing PC1
 npc1 <- 10
 pc1grid <- seq(from = min(axisscores$PC1), to = max(axisscores$PC1), length.out = npc1)
-# pc1gridpred <- array(dim = c(npc1, nt.fine))
 Xgrid <- as.matrix(cbind(rep(1, npc1), pc1grid, rep(0,npc1)))
-pc1gridpred <- fittedsplinemodel$comp.spline.clr %*% t(Xgrid) #clr predictions on a grid of equally spaced PC1 scores from min to max, with PC2 = 0 (mean value)
-
+pc1gridclr <- fittedsplinemodel$comp.spline.clr %*% t(Xgrid) #clr predictions on a grid of equally spaced PC1 scores from min to max, with PC2 = 0 (mean value)
+pc1gridpred <- array(dim = c(npc1, nt.fine))
+for(i in 1:npc1){
+ pc1gridpred[i,] <- clr2density(t.fine,t_step,pc1gridclr[,i])
+}
+pc1colors <- brewer.pal(10, "RdBu")
+matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors)
