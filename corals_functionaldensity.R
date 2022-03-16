@@ -123,6 +123,21 @@ clr2density <- function(z, z_step, clr)
     return(exp(clr)/trapzc(z_step,exp(clr)))
 }
 
+# residual plot
+residualplot <- function(t.fine, residua, nsites, sites, axisscores){
+  colorfunc <- colorRampPalette(brewer.pal(8, "RdBu"))
+  matplot(t.fine, residua, type = "l", lty = "solid", xlab = "log coral area", ylab = "clr residuals", col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
+  for(i in 1:nsites){
+    text(t.fine[1],
+      residua[1,i],sites[i],pos = 4, cex = 0.5)
+  }
+  for(i in 1:nsites){
+   text(t.fine[length(t.fine)],
+    residua[length(t.fine),i],sites[i],pos = 2, cex = 0.5)
+  }
+}
+
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
@@ -333,3 +348,5 @@ for(i in 1:npc1){
 }
 pc1colors <- brewer.pal(10, "RdBu")
 matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors)
+
+residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites, axisscores = axisscores)
