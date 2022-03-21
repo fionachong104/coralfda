@@ -123,7 +123,31 @@ clr2density <- function(z, z_step, clr)
     return(exp(clr)/trapzc(z_step,exp(clr)))
 }
 
-# residual plot
+# PC1 predictions plot
+# Input: axisscores = PCA axis scores
+        # fittedsplinemodel = object returned by fitZBmodel
+        # nt.fine = number of values on the x-axis (log coral area)
+        # t.fine = grid of log coral areas
+        # t_step = interval between the values in t.fine
+pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_step){
+  npc1 <- 10
+  pc1grid <- seq(from = min(axisscores$PC1), to = max(axisscores$PC1), length.out = npc1)
+  Xgrid <- as.matrix(cbind(rep(1, npc1), pc1grid, rep(0, npc1))) #third column 0 : mean of PC2
+  pc1gridclr <- fittedsplinemodel$comp.spline.clr %*% t(Xgrid) #clr predictions on a grid of equally spaced PC1 scores from min to max, with PC2 = 0 (mean value)
+  pc1gridpred <- array(dim = c(npc1, nt.fine))
+  for(i in 1:npc1){
+    pc1gridpred[i,] <- clr2density(t.fine,t_step,pc1gridclr[,i])
+  }
+  pc1colors <- brewer.pal(10, "RdBu")
+  matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors)
+}
+
+# residual plot coloured by PC1 scores (blue (more positive)-red (more negative))
+#  input: t.fine = grid of log coral areas
+# residua = residuals from fitted model (array, rows are log coral area values, columns are sites) 
+# nsites = number of sites
+# sites = vector of names of sites
+# axisscores = PCA axis scores
 residualplot <- function(t.fine, residua, nsites, sites, axisscores){
   colorfunc <- colorRampPalette(brewer.pal(8, "RdBu"))
   matplot(t.fine, residua, type = "l", lty = "solid", xlab = "log coral area", ylab = "clr residuals", col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
@@ -338,15 +362,7 @@ abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
 
 # figure showing predicted size distributions with increasing PC1
-npc1 <- 10
-pc1grid <- seq(from = min(axisscores$PC1), to = max(axisscores$PC1), length.out = npc1)
-Xgrid <- as.matrix(cbind(rep(1, npc1), pc1grid, rep(0,npc1)))
-pc1gridclr <- fittedsplinemodel$comp.spline.clr %*% t(Xgrid) #clr predictions on a grid of equally spaced PC1 scores from min to max, with PC2 = 0 (mean value)
-pc1gridpred <- array(dim = c(npc1, nt.fine))
-for(i in 1:npc1){
- pc1gridpred[i,] <- clr2density(t.fine,t_step,pc1gridclr[,i])
-}
-pc1colors <- brewer.pal(10, "RdBu")
-matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors)
+pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step)
 
+#residuals
 residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites, axisscores = axisscores)
