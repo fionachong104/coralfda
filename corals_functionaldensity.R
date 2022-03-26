@@ -161,6 +161,36 @@ residualplot <- function(t.fine, residua, nsites, sites, axisscores){
   }
 }
 
+#compute pointwise and global functional R-squared. Based on Talska et al. 2018 (p. 79 and code in supporting info)
+#arguments:
+#fittedsplinemodel: object returned by fitZBmodel()
+#t.fine: grid of values of log coral area at which to evaluate functions (vector)
+#t_step: step size in t.fine
+#Value: list containing 
+#R.t pointwise R2
+#R2global
+#also plots pointwise and global R2
+computeR2 <- function(fittedsplinemodel, t.fine, t_step){
+  #compute pointwise and global R^2
+  mean.l <- apply(fittedsplinemodel$smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
+  SSE <- rowSums((fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l)^2)
+  SST <- rowSums((fittedsplinemodel$smoothedobservations - mean.l)^2)
+  SSF <- rowSums((fittedsplinemodel$y_pred.l - mean.l)^2)
+  R.t <- SSF / SST #pointwise R^2
+  plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l")
+  
+  SST.norm <- 0
+  SSF.norm <- 0
+  for(i in 1:nsites){
+    SST.norm <- SST.norm + trapzc(t_step, (fittedsplinemodel$smoothedobservations[, i] - mean.l)^2)
+    SSF.norm <- SSF.norm + trapzc(t_step, (fittedsplinemodel$y_pred.l[, i] - mean.l)^2)
+  }
+  R2global <- SSF.norm / SST.norm
+  print(paste("global R^2:", R2global, sep = " "))
+  legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
+  
+  return(list(R.t = R.t, R2global = R2global))
+}
 
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
@@ -307,9 +337,6 @@ lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
-# 
-# matlines(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid")
-
 plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
 if(bootstrap){
   makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
@@ -318,25 +345,8 @@ lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 
-
-#compute pointwise and global R^2
-mean.l <- apply(fittedsplinemodel$smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
-SSE <- rowSums((fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l)^2)
-SST <- rowSums((fittedsplinemodel$smoothedobservations - mean.l)^2)
-SSF <- rowSums((fittedsplinemodel$y_pred.l - mean.l)^2)
-R.t <- SSF / SST #pointwise R^2
-plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l")
-
-SST.norm <- 0
-SSF.norm <- 0
-for(i in 1:nsites){
-  SST.norm <- SST.norm + trapzc(t_step, (fittedsplinemodel$smoothedobservations[, i] - mean.l)^2)
-  SSF.norm <- SSF.norm + trapzc(t_step, (fittedsplinemodel$y_pred.l[, i] - mean.l)^2)
-}
-R2global <- SSF.norm / SST.norm
-print(paste("global R^2:", R2global, sep = " "))
-legend("topright", bty = "n", legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
-
+Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_step = t_step) #compute and plot pointwise and global R-squared
+  
 #permutation F-test
 Falpha <- 0.05
 Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
