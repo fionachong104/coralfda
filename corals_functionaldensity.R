@@ -319,21 +319,6 @@ abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 
 
-# matplot(t.fine, betaboot[1,,], col = "grey", type = "l", lty = "solid", 
-#         xlab = "log coral areas", ylab = "clr of intercept")
-# lines(t.fine, comp.spline.clr[,1])
-# abline(a = 0, b = 0, lty = "dashed")
-# 
-# matplot(t.fine, betaboot[2,,], col = "grey", type = "l", lty = "solid", 
-#         xlab = "log coral areas", ylab = "clr of first axis scores")
-# lines(t.fine, comp.spline.clr[,2], col = "red")
-# abline(a = 0, b = 0, lty = "dashed")
-# 
-# matplot(t.fine, betaboot[3,,], col = "grey", type = "l", lty = "solid", 
-#         xlab = "log coral areas", ylab = "clr of second axis scores")
-# lines(t.fine, comp.spline.clr[,3], col = "blue")
-# abline(a = 0, b = 0, lty = "dashed")
-
 #compute pointwise and global R^2
 mean.l <- apply(fittedsplinemodel$smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
 SSE <- rowSums((fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l)^2)
