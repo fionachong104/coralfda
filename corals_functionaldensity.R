@@ -192,31 +192,26 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   return(list(R.t = R.t, R2global = R2global))
 }
 
-smoothhistogram <- function(i, oneyeardf){
-  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site==i]) #Apply Sturges' rule to data for site i
-  breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), 
-                length.out = nclasses + 1)
-  #breaks <- breaks[3:9]
+smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, weights, order){
+  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
   
-  print(diff(breaks))
-  
-  classwidth <- diff(breaks)[1] # assuming all classes have the same width
-  #create empty matrix for things to go in
-  dens.raw <- matrix(nrow = 1, ncol = nclasses)
-  
-  # get histogram density for just the subset of logArea values from each site
-  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site==sites[i]],
-                     breaks = breaks, plot = FALSE)
-  sitedens$density[sitedens$density == 0] <- 2/3 * 1/(sum(sitedens$counts)) # zero count imputation from Machalova et al 2021 p.1053
+  nc <- 9 #TEST
+ 
+  breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), length.out = nc + 1)
+  classwidth <- diff(breaks)[1] # assuming all classes have the same width, which is the case with nclass.Sturges()
+  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site == site], breaks = breaks, plot = TRUE) # get histogram density for just the subset of logArea values from each site
+  sitedens$density[sitedens$density == 0] <- 2 / 3 * 1 / (sum(sitedens$counts)) # zero count imputation from Machalova et al 2021 p.1053
   dens.raw <- sitedens$density / sum(sitedens$density)
-
-  # mid points (t is what people called independent variables in FDA)
-  t.raw <- sitedens$mids
-  
-  # clr transformation
-  clr.raw <- cenLR(dens.raw)$x.clr
-  
-  return(list(nc = nc, breaks = breaks, t.raw = t.raw, clr.raw = clr.raw))  
+  t.raw <- matrix(sitedens$mids, nrow = 1) # mid points (t is what people called independent variables in FDA)
+  clr.raw <- cenLR(matrix(dens.raw, nrow = 1))$x.clr # clr transformation
+  alphas <- seq(from = 0.01, to = 1, length.out = nalpha)
+  gcv <- array(dim = c(1, nalpha))
+  for(j in 1:nalpha){#try out different values of smoothing parameter
+    cspline <- compositionalSpline(t = t.raw, clrf = as.numeric(clr.raw), knots = knots, w = weights, order = order, der = 1, alpha = alphas[j], spline.plot = FALSE, basis.plot = FALSE)
+    gcv[j] <- cspline$GCV #generalized cross-validation score
+  }
+  plot(alphas, gcv, type = "l")
+  return(list(nc = nc, breaks = breaks, dens.raw = dens.raw, t.raw = t.raw, clr.raw = clr.raw, gcv = gcv))  
 }
 
 #import data
@@ -376,7 +371,8 @@ Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_
   
 #permutation F-test
 Falpha <- 0.05
-Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = 1e4, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
+nperm <- 1e2 #WANT A BIGGER NUMBER E.G. 1E4 FOR FINAL VERSION
+Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
 par(mfrow = c(1,1))
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
