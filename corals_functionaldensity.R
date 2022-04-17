@@ -196,7 +196,7 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
 #Arguments:
 #site: name of site
 #oneyeardf: data frame containing variables logArea and Site
-#nalpha: number of values of smoothing parameter alpha (between 0.1 and 1) to try on regular grid (default 30)
+#nalpha: number of values of smoothing parameter alpha (between 0.01 and 1) to try on regular grid (default 30)
 #knots: number of knots in compositional splines
 #order: order of splines
 #Value: list containing
@@ -225,10 +225,32 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
     cspline <- compositionalSpline(t = t.raw, clrf = as.numeric(clr.raw), knots = knots, w = weights, order = order, der = 1, alpha = alphas[j], spline.plot = FALSE, basis.plot = FALSE)
     gcv[j] <- cspline$GCV #generalized cross-validation score
   }
-  plot(alphas, gcv, type = "l")
   alpha <- alphas[which.min(gcv)] #choose the alpha from our grid that minimizes GCV score
   cspline <- compositionalSpline(t = t.raw, clrf = as.numeric(clr.raw), knots = knots, w = weights, order = order, der = 1, alpha = alpha, spline.plot = FALSE, basis.plot = FALSE) #refit with selected alpha
   return(list(nc = nc, breaks = breaks, dens.raw = dens.raw, t.raw = t.raw, clr.raw = clr.raw, gcv = gcv, alphas = alphas, alpha = alpha, coef = cspline$ZB_coef))  
+}
+
+#plot raw and smoothed histograms and predicted densities on clr scale
+#Arguments:
+#fittesplinemodel: object returned by fitZBmodel()
+#t.fine: grid of log areas on which clr densities evaluated
+#sites: list of site names
+#shists: list of objects returned by smoothhistogram() for each site
+#Value: plot with a panel for each site, clr density on y axis, log area on x axis, points are raw clr densities, solid lines are smoothed clr densities, dashed lines are predicted smoothed clr densities
+plotfit <- function(fittedsplinemodel, t.fine, sites, shists){
+  par(mfrow=c(4,5))
+  par(mar = c(4, 5, 2, 2))
+  yl <- range(range(fittedsplinemodel$smoothedobservations), range(fittedsplinemodel$y_pred.l))
+  for (i in 1:nsites){
+    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = "log coral area", ylab = "clr density") #smoothed raw data
+    lines(t.fine, fittedsplinemodel$y_pred.l[, i], lty = "dashed") #predicted
+    points(shists[[i]]$t.raw, shists[[i]]$clr.raw, pch = 16, col = adjustcolor("black", 0.4)) #raw clr densities in bins
+    if(i == 1){
+      legend("bottomleft", bty = "n", pch = c(16, NA, NA), col = c(adjustcolor("black", 0.4), "black", "black"), lty = c(NA, "solid", "dashed"), legend = c("raw", "smoothed", "predicted"))
+    }
+    axlims <- par("usr")
+    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))))
+  }
 }
 
 #import data
@@ -261,10 +283,13 @@ coef <- matrix(nrow = nsites, ncol = g + k) #Machalova et al 2021, Theorem 1: di
 nalpha <- 30
 gcv <- array(dim = c(nsites, nalpha))
 alphas <- seq(from = 0.1, to = 1, length.out = nalpha)
+selectedalphas <- rep(NA, nsites) #smoothing parameter for each site
+shists <- vector(mode = "list", length = nsites) #list of lists: smoothed histogram data for each site
 for (i in 1:nsites){
-  shist <- smoothhistogram(site = sites[i], oneyeardf = oneyeardf, nalpha = nalpha, knots = knots, order = order)
-  gcv[i, ] <- shist$gcv
-  coef[i, ] <- shist$coef
+  shists[[i]] <- smoothhistogram(site = sites[i], oneyeardf = oneyeardf, nalpha = nalpha, knots = knots, order = order)
+  gcv[i, ] <- shists[[i]]$gcv
+  coef[i, ] <- shists[[i]]$coef
+  selectedalphas[i] <- shists[[i]]$alpha
 }
 plot(range(alphas), range(gcv), type = "n", xlab = expression(alpha), ylab = "GCV")
 for(i in 1:nsites){
@@ -278,6 +303,7 @@ t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists)
 
 plot(t.fine, fittedsplinemodel$comp.spline.clr[, 1], type = "l")
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2], col = "red")
@@ -289,11 +315,6 @@ for (i in 2:nsites){
   lines(t.fine, fittedsplinemodel$y_pred.l[, i])
 }
 
-par(mfrow=c(4,5))
-for (i in 1:nsites){
-  plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = sites[i])
-  lines(t.fine, fittedsplinemodel$y_pred.l[, i], col="blue")
-}
 
 bootstrap <- FALSE
 
@@ -315,7 +336,7 @@ bootstrap <- FALSE
 
 
 par(mfrow = c(1,1))
-plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral areas", ylab = "clr of intercept" )
+plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral area", ylab = "clr of intercept" )
 if(bootstrap){
   makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
 }
@@ -324,7 +345,7 @@ abline(a = 0, b = 0, lty = "dashed")
 coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
-plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral areas", ylab = "clr of first axis scores" )
+plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral area", ylab = "clr of first axis scores" )
 if(bootstrap){
   makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
 }
@@ -332,7 +353,7 @@ lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
-plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral areas", ylab = "clr of second axis scores" )
+plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral area", ylab = "clr of second axis scores" )
 if(bootstrap){
   makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
 }
