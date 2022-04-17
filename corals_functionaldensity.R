@@ -192,6 +192,33 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   return(list(R.t = R.t, R2global = R2global))
 }
 
+smoothhistogram <- function(i, oneyeardf){
+  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site==i]) #Apply Sturges' rule to data for site i
+  breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), 
+                length.out = nclasses + 1)
+  #breaks <- breaks[3:9]
+  
+  print(diff(breaks))
+  
+  classwidth <- diff(breaks)[1] # assuming all classes have the same width
+  #create empty matrix for things to go in
+  dens.raw <- matrix(nrow = 1, ncol = nclasses)
+  
+  # get histogram density for just the subset of logArea values from each site
+  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site==sites[i]],
+                     breaks = breaks, plot = FALSE)
+  sitedens$density[sitedens$density == 0] <- 2/3 * 1/(sum(sitedens$counts)) # zero count imputation from Machalova et al 2021 p.1053
+  dens.raw <- sitedens$density / sum(sitedens$density)
+
+  # mid points (t is what people called independent variables in FDA)
+  t.raw <- sitedens$mids
+  
+  # clr transformation
+  clr.raw <- cenLR(dens.raw)$x.clr
+  
+  return(list(nc = nc, breaks = breaks, t.raw = t.raw, clr.raw = clr.raw))  
+}
+
 #import data
 oneyeardf <- read.csv("oneyeardb.csv", 
                       row.names=1)
