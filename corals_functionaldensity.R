@@ -305,17 +305,6 @@ ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists)
 
-plot(t.fine, fittedsplinemodel$comp.spline.clr[, 1], type = "l")
-lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2], col = "red")
-lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3], col = "blue")
-abline(a = 0, b = 0, lty = "dashed")
-
-plot(t.fine, fittedsplinemodel$y_pred.l[, 1], type = "l")
-for (i in 2:nsites){
-  lines(t.fine, fittedsplinemodel$y_pred.l[, i])
-}
-
-
 bootstrap <- FALSE
 
   # Bootstrap
