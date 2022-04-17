@@ -192,11 +192,25 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   return(list(R.t = R.t, R2global = R2global))
 }
 
+#smooth a set of log areas using compositionalSpline: choose number of histogram bins using Sturges' rule, choose smoothing parameter alpha by generalized cross-validation
+#Arguments:
+#site: name of site
+#oneyeardf: data frame containing variables logArea and Site
+#nalpha: number of values of smoothing parameter alpha (between 0.1 and 1) to try on regular grid (default 30)
+#knots: number of knots in compositional splines
+#order: order of splines
+#Value: list containing
+#nc: number of bins selected by Sturges' rule
+#breaks: histogram breaks selected by Sturges' rule
+#dens.raw: density in each bin (after zero count imputation)
+#t.raw: bin midpoints
+#clr.raw: clr-transformed density in each bin
+#gcv: generalized cross-validation score for each value of alpha
+#alphas: vector of smoothing parameters considered
+#alpha: smoothing parameter value that minimizes gcv score
+#coef: coefficients of ZB-splines, estimated using selected value of alpha
 smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
   nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
-  
-  #nc <- 9 #TEST
- 
   breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), length.out = nc + 1)
   classwidth <- diff(breaks)[1] # assuming all classes have the same width, which is the case with nclass.Sturges()
   sitedens <- hist(oneyeardf$logArea[oneyeardf$Site == site], breaks = breaks, plot = TRUE) # get histogram density for just the subset of logArea values from each site
@@ -212,7 +226,9 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
     gcv[j] <- cspline$GCV #generalized cross-validation score
   }
   plot(alphas, gcv, type = "l")
-  return(list(nc = nc, breaks = breaks, dens.raw = dens.raw, t.raw = t.raw, clr.raw = clr.raw, gcv = gcv))  
+  alpha <- alphas[which.min(gcv)] #choose the alpha from our grid that minimizes GCV score
+  cspline <- compositionalSpline(t = t.raw, clrf = as.numeric(clr.raw), knots = knots, w = weights, order = order, der = 1, alpha = alpha, spline.plot = FALSE, basis.plot = FALSE) #refit with selected alpha
+  return(list(nc = nc, breaks = breaks, dens.raw = dens.raw, t.raw = t.raw, clr.raw = clr.raw, gcv = gcv, alphas = alphas, alpha = alpha, coef = cspline$ZB_coef))  
 }
 
 #import data
@@ -263,7 +279,7 @@ t.raw <- sitedens$mids # assuming same classes for all sites
 clr.raw <- cenLR(dens.raw)$x.clr
 
 #compositional spline
-g <- 3
+g <- 2
 nknots <- g + 2
 knots <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea),
              length.out = nknots) #g + 2 equally-spaced values
