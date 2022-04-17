@@ -192,10 +192,10 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   return(list(R.t = R.t, R2global = R2global))
 }
 
-smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, weights, order){
+smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
   nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
   
-  nc <- 9 #TEST
+  #nc <- 9 #TEST
  
   breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), length.out = nc + 1)
   classwidth <- diff(breaks)[1] # assuming all classes have the same width, which is the case with nclass.Sturges()
@@ -205,6 +205,7 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, weights, order)
   t.raw <- matrix(sitedens$mids, nrow = 1) # mid points (t is what people called independent variables in FDA)
   clr.raw <- cenLR(matrix(dens.raw, nrow = 1))$x.clr # clr transformation
   alphas <- seq(from = 0.01, to = 1, length.out = nalpha)
+  weights <- rep(1, nc)
   gcv <- array(dim = c(1, nalpha))
   for(j in 1:nalpha){#try out different values of smoothing parameter
     cspline <- compositionalSpline(t = t.raw, clrf = as.numeric(clr.raw), knots = knots, w = weights, order = order, der = 1, alpha = alphas[j], spline.plot = FALSE, basis.plot = FALSE)
