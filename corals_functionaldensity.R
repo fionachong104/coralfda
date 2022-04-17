@@ -354,7 +354,7 @@ Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_
   
 #permutation F-test
 Falpha <- 0.05
-nperm <- 1e2 #WANT A BIGGER NUMBER E.G. 1E4 FOR FINAL VERSION
+nperm <- 1e4
 Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
 par(mfrow = c(1,1))
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
