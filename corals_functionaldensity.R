@@ -213,7 +213,7 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
   nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
   breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), length.out = nc + 1)
   classwidth <- diff(breaks)[1] # assuming all classes have the same width, which is the case with nclass.Sturges()
-  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site == site], breaks = breaks, plot = TRUE) # get histogram density for just the subset of logArea values from each site
+  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site == site], breaks = breaks, plot = FALSE) # get histogram density for just the subset of logArea values from each site
   sitedens$density[sitedens$density == 0] <- 2 / 3 * 1 / (sum(sitedens$counts)) # zero count imputation from Machalova et al 2021 p.1053
   dens.raw <- sitedens$density / sum(sitedens$density)
   t.raw <- matrix(sitedens$mids, nrow = 1) # mid points (t is what people called independent variables in FDA)
@@ -246,46 +246,11 @@ axisscores <- axisscores[order(rownames(axisscores)), ]
 sites <- sort(unique(oneyeardf$Site))
 nsites <- length(sites)
 
-# check how many histogram bins are used, as per Sturges rule
-
-for (i in sites){
-  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site==i])
-  print(c(i, nc))
-}
-
-nclasses <- 9 # this might need changing later as data changes
-
-breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), 
-              length.out = nclasses + 1)
-#breaks <- breaks[3:9]
-classwidth <- diff(breaks)[1] # assuming all classes have the same width
-#create empty matrix for things to go in
-dens.raw <- matrix(nrow = nsites, ncol = nclasses)
-
-# get histogram density for just the subset of logArea values from each site
-for(i in 1:nsites){
-  sitedens <- hist(oneyeardf$logArea[oneyeardf$Site==sites[i]],
-                   breaks = breaks, plot = FALSE)
-  # for the rows of the matrix
-  sitedens$density[sitedens$density == 0] <- 2/3 * 1/(sum(sitedens$counts)) 
-                      # zero count imputation from Machalova et al 2021 p.1053
-  dens.raw[i,] <- sitedens$density / sum(sitedens$density)
-}
-
-# mid points (t is what people called independent variables in FDA)
-t.raw <- sitedens$mids # assuming same classes for all sites
-
-# clr transformation
-clr.raw <- cenLR(dens.raw)$x.clr
-
 #compositional spline
 g <- 2
 nknots <- g + 2
 knots <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea),
              length.out = nknots) #g + 2 equally-spaced values
-
-weights <- rep(1, nclasses)
-
 k <- 3 #2 is quadratic, 3 is cubic, etc
 order <- k + 1
 
@@ -294,25 +259,16 @@ par(mfrow = c(1, 1))
 coef <- matrix(nrow = nsites, ncol = g + k) #Machalova et al 2021, Theorem 1: dimension of the ZB-spline vector space is g + k
 
 nalpha <- 30
-alphas <- seq(from = 0.01, to = 1, length.out = nalpha)
 gcv <- array(dim = c(nsites, nalpha))
+alphas <- seq(from = 0.1, to = 1, length.out = nalpha)
 for (i in 1:nsites){
-  for(j in 1:nalpha){#try out different values of smoothing parameter
-    cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
-                                   knots = knots, w = weights, order = order, der = 1, alpha = alphas[j], spline.plot = FALSE, basis.plot = FALSE)
-    gcv[i, j] <- cspline$GCV #generalized cross-validation score
-  }
+  shist <- smoothhistogram(site = sites[i], oneyeardf = oneyeardf, nalpha = nalpha, knots = knots, order = order)
+  gcv[i, ] <- shist$gcv
+  coef[i, ] <- shist$coef
 }
 plot(range(alphas), range(gcv), type = "n", xlab = expression(alpha), ylab = "GCV")
 for(i in 1:nsites){
   lines(alphas, gcv[i, ])
-}
-
-for(i in 1:nsites){
-  cspline <- compositionalSpline(t = t.raw, clrf = clr.raw[i,], 
-              knots = knots, w = weights, order = order, der = 1, alpha = 1, #still need to choose alpha properly based on the generalized cross-validation score above
-              spline.plot = TRUE, basis.plot = TRUE)
-  coef[i,] <- cspline$ZB_coef
 }
 
 # ZB-spline basis evaluated on the grid "t.fine"
@@ -323,20 +279,20 @@ ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 
-plot(t.fine, fittedsplinemodel$comp.spline.clr[,1], type = "l")
-lines(t.fine, fittedsplinemodel$comp.spline.clr[,2], col = "red")
-lines(t.fine, fittedsplinemodel$comp.spline.clr[,3], col = "blue")
+plot(t.fine, fittedsplinemodel$comp.spline.clr[, 1], type = "l")
+lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2], col = "red")
+lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3], col = "blue")
 abline(a = 0, b = 0, lty = "dashed")
 
-plot(t.fine, fittedsplinemodel$y_pred.l[,1], type = "l")
+plot(t.fine, fittedsplinemodel$y_pred.l[, 1], type = "l")
 for (i in 2:nsites){
-  lines(t.fine, fittedsplinemodel$y_pred.l[,i])
+  lines(t.fine, fittedsplinemodel$y_pred.l[, i])
 }
 
 par(mfrow=c(4,5))
 for (i in 1:nsites){
-  plot(t.fine, fittedsplinemodel$smoothedobservations[,i], type = "l", main = sites[i])
-  lines(t.fine, fittedsplinemodel$y_pred.l[,i], col="blue")
+  plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = sites[i])
+  lines(t.fine, fittedsplinemodel$y_pred.l[, i], col="blue")
 }
 
 bootstrap <- FALSE
