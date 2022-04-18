@@ -252,7 +252,7 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
     axlims <- par("usr")
     text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.2 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))))
     ni <- dim(oneyeardf[oneyeardf$Site == sites[i], ])[1]
-    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(italic(n) == .(ni)))
+    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(italic(n)[i] == .(ni)))
     
   }
 }
