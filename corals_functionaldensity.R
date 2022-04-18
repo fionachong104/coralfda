@@ -236,8 +236,9 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
 #t.fine: grid of log areas on which clr densities evaluated
 #sites: list of site names
 #shists: list of objects returned by smoothhistogram() for each site
+#oneyeardf: data frame including variable Site
 #Value: plot with a panel for each site, clr density on y axis, log area on x axis, points are raw clr densities, solid lines are smoothed clr densities, dashed lines are predicted smoothed clr densities
-plotfit <- function(fittedsplinemodel, t.fine, sites, shists){
+plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
   par(mfrow=c(4,5))
   par(mar = c(4, 5, 2, 2))
   yl <- range(range(fittedsplinemodel$smoothedobservations), range(fittedsplinemodel$y_pred.l))
@@ -249,7 +250,10 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists){
       legend("bottomleft", bty = "n", pch = c(16, NA, NA), col = c(adjustcolor("black", 0.4), "black", "black"), lty = c(NA, "solid", "dashed"), legend = c("raw", "smoothed", "predicted"))
     }
     axlims <- par("usr")
-    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))))
+    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.2 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))))
+    ni <- dim(oneyeardf[oneyeardf$Site == sites[i], ])[1]
+    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(italic(n) == .(ni)))
+    
   }
 }
 
@@ -303,7 +307,7 @@ t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
-plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists)
+plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
 
 bootstrap <- FALSE
 
