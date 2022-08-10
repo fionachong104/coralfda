@@ -27,7 +27,7 @@ make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
   se <- sqrt(diag(V))
   clow <- f - 1.96 * se
   chigh <- f + 1.96 * se
-  polygon(c(t.fine, rev(t.fine)), c(clow, rev(chigh)), col = adjustcolor("red", alpha.f = 0.1), 
+  polygon(c(t.fine, rev(t.fine)), c(clow, rev(chigh)), col = adjustcolor("grey", alpha.f = 0.5), 
           border = NA)
 }
 
@@ -153,11 +153,11 @@ residualplot <- function(t.fine, residua, nsites, sites, axisscores){
   matplot(t.fine, residua, type = "l", lty = "solid", xlab = "log coral area", ylab = "clr residuals", col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
   for(i in 1:nsites){
     text(t.fine[1],
-      residua[1,i],sites[i],pos = 4, cex = 0.5)
+      residua[1,i],sites[i],pos = 4, cex = 0.8)
   }
   for(i in 1:nsites){
    text(t.fine[length(t.fine)],
-    residua[length(t.fine),i],sites[i],pos = 2, cex = 0.5)
+    residua[length(t.fine),i],sites[i],pos = 2, cex = 0.8)
   }
 }
 
@@ -258,10 +258,12 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
 }
 
 #import data
-oneyeardf <- read.csv("oneyeardb.csv", 
+oneyeardf <- read.csv("oneyeardb_reduced.csv",  #_reduced.csv are without Julian Rock Nursery/Julian Rock False Trench/wolf Rock/Hendersons
                       row.names=1)
 oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
-axisscores <- read.csv("axisscores.csv", 
+
+
+axisscores <- read.csv("axisscores_reduced.csv", #_reduced.csv are without Julian Rock Nursery/Julian Rock False Trench/wolf Rock/Hendersons
                        row.names=1)
 axisscores <- axisscores[order(rownames(axisscores)), ]
 
@@ -347,6 +349,7 @@ abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
 plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral area", ylab = "clr of second axis scores" )
+
 if(bootstrap){
   makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
 }
