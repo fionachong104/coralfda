@@ -239,11 +239,11 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
 #oneyeardf: data frame including variable Site
 #Value: plot with a panel for each site, clr density on y axis, log area on x axis, points are raw clr densities, solid lines are smoothed clr densities, dashed lines are predicted smoothed clr densities
 plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
-  par(mfrow=c(4,5))
+  par(mfrow = c(4,4)) # 4,4 for reduced sites
   par(mar = c(4, 5, 2, 2))
   yl <- range(range(fittedsplinemodel$smoothedobservations), range(fittedsplinemodel$y_pred.l))
   for (i in 1:nsites){
-    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = "log coral area", ylab = "clr density") #smoothed raw data
+    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = "log coral area", ylab = "clr density", cex.main = 1.5, cex.lab = 1.5) #smoothed raw data
     lines(t.fine, fittedsplinemodel$y_pred.l[, i], lty = "dashed") #predicted
     points(shists[[i]]$t.raw, shists[[i]]$clr.raw, pch = 16, col = adjustcolor("black", 0.4)) #raw clr densities in bins
     if(i == 1){
@@ -367,7 +367,7 @@ par(mfrow = c(1,1))
 plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))))
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
-legend("topright", bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
+legend(x = 6, y = 1.4, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
 
 # figure showing predicted size distributions with increasing PC1
 pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step)
