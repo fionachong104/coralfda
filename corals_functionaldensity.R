@@ -144,7 +144,7 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
   par(mar = c(4, 6, 2, 2))
   matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
   par(mar = c(5, 1, 5, 2.5))
-  image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA)
+  image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1")
   axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75)
 }
 
