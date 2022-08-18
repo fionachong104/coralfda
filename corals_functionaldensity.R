@@ -140,12 +140,12 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
     
   }
   pc1colors <- brewer.pal(10, "RdBu")
-  layout(t(1:2), widths = c(6, 1))
+  layout(t(1:2), widths = c(6, 1)) #use layout to make two panels
   par(mar = c(4, 6, 2, 2))
   matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
   par(mar = c(5, 1, 5, 2.5))
-  image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1")
-  axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75)
+  image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1") #use image to plot the color bar
+  axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75) #label the colors, rotate the labels and make the axis itself invisible
 }
 
 # residual plot coloured by PC1 scores (blue (more positive)-red (more negative))
