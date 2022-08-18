@@ -137,9 +137,15 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
   pc1gridpred <- array(dim = c(npc1, nt.fine))
   for(i in 1:npc1){
     pc1gridpred[i,] <- clr2density(t.fine,t_step,pc1gridclr[,i])
-    pc1colors <- brewer.pal(10, "RdBu")
+    
   }
+  pc1colors <- brewer.pal(10, "RdBu")
+  layout(t(1:2), widths = c(6, 1))
+  par(mar = c(4, 6, 2, 2))
   matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
+  par(mar = c(5, 1, 5, 2.5))
+  image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA)
+  axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75)
 }
 
 # residual plot coloured by PC1 scores (blue (more positive)-red (more negative))
