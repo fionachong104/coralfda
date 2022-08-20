@@ -129,7 +129,8 @@ clr2density <- function(z, z_step, clr)
         # nt.fine = number of values on the x-axis (log coral area)
         # t.fine = grid of log coral areas
         # t_step = interval between the values in t.fine
-pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_step){
+        # fname: name of pdf file to which we will write
+pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_step, fname){
   npc1 <- 10
   pc1grid <- seq(from = min(axisscores$PC1), to = max(axisscores$PC1), length.out = npc1)
   Xgrid <- as.matrix(cbind(rep(1, npc1), pc1grid, rep(0, npc1))) #third column 0 : mean of PC2
@@ -140,12 +141,13 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
     
   }
   pc1colors <- brewer.pal(10, "RdBu")
-  layout(t(1:2), widths = c(6, 1)) #use layout to make two panels
-  par(mar = c(4, 6, 2, 2))
+  pdf(file = fname, width = 7, height = 7)
+  par(mar = c(5, 6, 2, 2))
   matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
-  par(mar = c(5, 1, 5, 2.5))
+  par(fig = c(grconvertX(c(5, 8), from="user", to="ndc"), grconvertY(c(0.15, 0.3), from="user", to="ndc")), mar = c(4,6,1,1), new = TRUE) #coordinates in which we'll plot the color bar image
   image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1") #use image to plot the color bar
   axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75) #label the colors, rotate the labels and make the axis itself invisible
+  dev.off()
 }
 
 # residual plot coloured by PC1 scores (blue (more positive)-red (more negative))
@@ -376,7 +378,7 @@ abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
 
 # figure showing predicted size distributions with increasing PC1
-pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step)
+pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step, fname = "pc1predictions.pdf")
 
 #residuals
 residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites, axisscores = axisscores)
