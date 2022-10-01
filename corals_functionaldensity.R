@@ -147,10 +147,10 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
   }
   par(oldpar, no.readonly = TRUE) #reset to original to get predictable behaviour
   par(mar = c(5, 6, 2, 2))
-  matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = "log coral area", ylab = "probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
+  matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "Probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
   par(fig = c(grconvertX(c(7, 8), from = "user", to = "ndc"), grconvertY(c(0.15, 0.3), from = "user", to = "ndc")), mar = c(1, 1, 2, 1), new = TRUE) #coordinates in which we'll plot the color bar image
   image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1") #use image to plot the color bar
-  axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 0.75) #label the colors, rotate the labels and make the axis itself invisible
+  axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 1) #label the colors, rotate the labels and make the axis itself invisible
   if(!is.na(fname)){
     dev.off()
   }
@@ -165,14 +165,14 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
 # axisscores = PCA axis scores
 residualplot <- function(t.fine, residua, nsites, sites, axisscores){
   colorfunc <- colorRampPalette(brewer.pal(8, "RdBu"))
-  matplot(t.fine, residua, type = "l", lty = "solid", xlab = "log coral area", ylab = "clr residuals", cex.lab = 1.5, cex.axis = 1.5, col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
+  matplot(t.fine, residua, type = "l", lty = "solid", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr residuals", cex.lab = 1.5, cex.axis = 1.5, col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
   for(i in 1:nsites){
     text(t.fine[1],
-      residua[1,i],sites[i],pos = 4, cex = 0.8)
+      residua[1,i],sites[i],pos = 4, cex = 0.9)
   }
   for(i in 1:nsites){
    text(t.fine[length(t.fine)],
-    residua[length(t.fine),i],sites[i],pos = 2, cex = 0.8)
+    residua[length(t.fine),i],sites[i],pos = 2, cex = 0.9)
   }
 }
 
@@ -192,7 +192,7 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   SST <- rowSums((fittedsplinemodel$smoothedobservations - mean.l)^2)
   SSF <- rowSums((fittedsplinemodel$y_pred.l - mean.l)^2)
   R.t <- SSF / SST #pointwise R^2
-  plot(t.fine, R.t, xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l", cex.lab = 1.5, cex.axis = 1.5)
+  plot(t.fine, R.t, xlab = expression(paste("Log coral area"~(cm^2))), ylab = expression(paste("Pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l", cex.lab = 1.5, cex.axis = 1.5)
   
   SST.norm <- 0
   SSF.norm <- 0
@@ -258,16 +258,16 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
   par(mar = c(4, 5, 2, 2))
   yl <- range(range(fittedsplinemodel$smoothedobservations), range(fittedsplinemodel$y_pred.l))
   for (i in 1:nsites){
-    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = "log coral area", ylab = "clr density", cex.main = 1.5, cex.lab = 1.5, cex.axis = 1.5) #smoothed raw data
+    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr density", cex.main = 1.5, cex.lab = 1.5, cex.axis = 1.5) #smoothed raw data
     lines(t.fine, fittedsplinemodel$y_pred.l[, i], lty = "dashed") #predicted
     points(shists[[i]]$t.raw, shists[[i]]$clr.raw, pch = 16, col = adjustcolor("black", 0.4)) #raw clr densities in bins
     if(i == 1){
-      legend("bottomleft", bty = "n", pch = c(16, NA, NA), col = c(adjustcolor("black", 0.4), "black", "black"), lty = c(NA, "solid", "dashed"), legend = c("raw", "smoothed", "predicted"))
+      legend("bottomright", bty = "n", pch = c(16, NA, NA), col = c(adjustcolor("black", 0.4), "black", "black"), lty = c(NA, "solid", "dashed"), legend = c("raw", "smoothed", "predicted"), cex = 1.2)
     }
     axlims <- par("usr")
-    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.2 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))))
+    text(axlims[4] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.2 * (axlims[4] - axlims[3]), bquote(alpha == .(round(shists[[i]]$alpha, 2))), cex = 1.5)
     ni <- dim(oneyeardf[oneyeardf$Site == sites[i], ])[1]
-    text(axlims[2] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(italic(n)[i] == .(ni)))
+    text(axlims[4] - 0.2 * (axlims[2] - axlims[1]), axlims[3] + 0.1 * (axlims[4] - axlims[3]), bquote(italic(n)[i] == .(ni)), cex = 1.5)
     
   }
 }
@@ -282,13 +282,13 @@ oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that
 
 axisscores <- read.csv("axisscores.csv", #_reduced.csv are without Julian Rock Nursery/Julian Rock False Trench/wolf Rock/Hendersons
                        row.names=1)
-axisscores <- axisscores[order(rownames(axisscores)), ]
+axisscores <- axisscores[order(axisscores$PC1), ]
 
 # pcascores <- read.csv("pcascores.csv") # calling PCA scores from all environmental variables
 # pcascores <- pcascores[order(pcascores$Site), ]
 
 
-sites <- sort(unique(oneyeardf$Site))
+sites <- unique(row.names(axisscores))
 nsites <- length(sites)
 
 #compositional spline
@@ -348,7 +348,7 @@ bootstrap <- FALSE
 
 
 par(mfrow = c(1,1))
-plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = "log coral area", ylab = "clr of intercept", cex.lab = 1.5, cex.axis = 1.5 )
+plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of intercept", cex.lab = 1.5, cex.axis = 1.5 )
 if(bootstrap){
   makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
 }
@@ -357,7 +357,7 @@ abline(a = 0, b = 0, lty = "dashed")
 coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
-plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = "log coral area", ylab = "clr of first axis scores", cex.lab = 1.5, cex.axis = 1.5  )
+plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of first axis (PC1) scores", cex.lab = 1.5, cex.axis = 1.5  )
 if(bootstrap){
   makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
 }
@@ -365,7 +365,7 @@ lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
 make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
-plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = "log coral area", ylab = "clr of second axis scores", cex.lab = 1.5, cex.axis = 1.5  )
+plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of second axis (PC2) scores", cex.lab = 1.5, cex.axis = 1.5  )
 
 if(bootstrap){
   makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
@@ -381,7 +381,7 @@ Falpha <- 0.05
 nperm <- 1e4
 Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
 par(mfrow = c(1,1))
-plot(t.fine, Ftest$Fobs, type = "l", xlab = "log coral area", ylab = expression(paste("pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
+plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("Log coral area"~(cm^2))), ylab = expression(paste("Pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
