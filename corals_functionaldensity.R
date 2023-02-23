@@ -67,6 +67,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
+#FmaxP: randomization P-value based on Fmax (they call it permutation, but we don't look at all possible permutations)
 functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, axisscores, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
@@ -81,7 +82,8 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.
   Fmaxobs <- max(Fobs) #observed max(F(t))
   Fmaxperm <- apply(Fperm, 1, "max") #max(F(t)) in each permutation
   Fmaxcrit <- quantile(Fmaxperm, 1 - Falpha)
-  return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit))
+  FmaxP <- (sum(Fmaxperm >= Fmaxobs) + 1) / (nperm + 1) #include the observed max(F(t))
+  return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit, FmaxP = FmaxP))
 }
 
 #fit a ZB-spline model
@@ -378,13 +380,14 @@ Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_
   
 #permutation F-test
 Falpha <- 0.05
-nperm <- 1e4
+nperm <- 1e4 - 1
 Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
 par(mfrow = c(1,1))
 plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("Log coral area"~(cm^2))), ylab = expression(paste("Pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
+print(paste("Randomization Fmax test: P =", Ftest$FmaxP, "from", nperm, "randomizations"))
 
 # figure showing predicted size distributions with increasing PC1
 pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step, fname = NA, oldpar = oldpar)
