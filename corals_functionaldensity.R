@@ -277,18 +277,10 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
 
 #import data
-oneyeardf <- read.csv("oneyeardb.csv",  #_reduced.csv are without Julian Rock Nursery/Julian Rock False Trench/wolf Rock/Hendersons
-                      row.names=1)
+oneyeardf <- read.csv("oneyeardf.csv", row.names=1)
 oneyeardf <- oneyeardf[is.na(oneyeardf$ROI.LabelCode), ] # to remove corals that were out of frame 
-
-
-axisscores <- read.csv("axisscores.csv", #_reduced.csv are without Julian Rock Nursery/Julian Rock False Trench/wolf Rock/Hendersons
-                       row.names=1)
+axisscores <- read.csv("axisscores.csv", row.names=1)
 axisscores <- axisscores[order(axisscores$PC1), ]
-
-# pcascores <- read.csv("pcascores.csv") # calling PCA scores from all environmental variables
-# pcascores <- pcascores[order(pcascores$Site), ]
-
 
 sites <- unique(row.names(axisscores))
 nsites <- length(sites)
