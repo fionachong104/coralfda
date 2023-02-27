@@ -80,10 +80,10 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.
     permutedmodel <- fitZBmodel(coef = coef[iperm, ], axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
     Fperm[i, ] <- permutedmodel$F
   }
-  Fcrit <- apply(Fperm, 2, "quantile", 1 - Falpha)
+  Fcrit <- apply(rbind(Fperm, Fobs), 2, "quantile", 1 - Falpha)
   Fmaxobs <- max(Fobs) #observed max(F(t))
   Fmaxperm <- apply(Fperm, 1, "max") #max(F(t)) in each permutation
-  Fmaxcrit <- quantile(Fmaxperm, 1 - Falpha)
+  Fmaxcrit <- quantile(c(Fmaxperm, Fmaxobs), 1 - Falpha)
   FmaxP <- (sum(Fmaxperm >= Fmaxobs) + 1) / (nperm + 1) #include the observed max(F(t))
   return(list(Fperm = Fperm, Fobs = Fobs, Fcrit = Fcrit, Fmaxperm = Fmaxperm, Fmaxobs = Fmaxobs, Fmaxcrit = Fmaxcrit, FmaxP = FmaxP))
 }
