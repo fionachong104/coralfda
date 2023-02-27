@@ -3,6 +3,8 @@ library(fda)
 library(robCompositions)
 library(RColorBrewer)
 
+set.seed(12345)
+
 # make polygon
 makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the array is number of values of t.fine 
                                     # and number of bootstrap iterations, t.fine is x values for polygon
@@ -379,7 +381,7 @@ plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("Log coral area"~(c
 lines(t.fine, Ftest$Fcrit, lty = "dotted")
 abline(h = Ftest$Fmaxcrit, lty = "dashed")
 legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
-print(paste("Randomization Fmax test: P =", Ftest$FmaxP, "from", nperm, "randomizations"))
+print(paste("Randomization Fmax test: observed Fmax = ", Ftest$Fmaxobs, "P =", Ftest$FmaxP, "from", nperm, "randomizations"))
 legend(x = 0, y = 0.9, bty = "n", cex = 1.5, legend = bquote(paste(italic(P)==.(round(Ftest$FmaxP, 2)))))
 
 # figure showing predicted size distributions with increasing PC1
