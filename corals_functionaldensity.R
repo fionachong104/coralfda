@@ -5,12 +5,12 @@ library(RColorBrewer)
 
 set.seed(12345)
 
-# make polygon
+# make polygon representing 95% pointwise confidence band by bootstrap
 makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the array is number of values of t.fine 
                                     # and number of bootstrap iterations, t.fine is x values for polygon
   q025 <- apply(y, 1, "quantile", 0.025)
   q975 <- apply(y, 1, "quantile", 0.975)
-  polygon(c(t.fine, rev(t.fine)), c(q025,rev(q975)), col = adjustcolor("green", alpha.f = 0.1), 
+  polygon(c(t.fine, rev(t.fine)), c(q025,rev(q975)), col = adjustcolor("gray", alpha.f = 0.5), 
           border = NA)
 }
 
@@ -22,6 +22,7 @@ makepolygon95 <- function(y, t.fine){ # y is a 2 dimensional array, size of the 
 #t.fine: points at which to evaluate function
 #f: estimated values of function
 #Value: draws a polygon representing approximate 95% confidence band around f at the points in t.fine
+#Note: we probably should not trust this, even though in our model it agrees well with the bootstrap version
 make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
   Omegafull <- vcov(splinemodel)
   Omega <- Omegafull[i, i]
@@ -324,7 +325,7 @@ ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
 
-bootstrap <- FALSE
+bootstrap <- TRUE #CI by bootstrap? Otherwise by asymptotic method on which we probably can't rely, although results similar
 
   # Bootstrap
   # functional residuals
@@ -347,28 +348,31 @@ par(mfrow = c(1,1))
 plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of intercept", cex.lab = 1.5, cex.axis = 1.5 )
 if(bootstrap){
   makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
+} else {
+  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 }
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
 coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 
 plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of first axis (PC1) scores", cex.lab = 1.5, cex.axis = 1.5  )
 if(bootstrap){
   makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
+} else {
+  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 }
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
 
 plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of second axis (PC2) scores", cex.lab = 1.5, cex.axis = 1.5  )
 
 if(bootstrap){
   makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
+} else {
+  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 }
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
 abline(a = 0, b = 0, lty = "dashed")
-make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
 
 Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_step = t_step) #compute and plot pointwise and global R-squared
   
