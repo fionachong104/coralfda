@@ -34,6 +34,30 @@ make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
           border = NA)
 }
 
+#plot a single coefficient function
+#Arguments:
+#t.fine: points at which to evaluate function
+#xlab: x axis label
+#ylab: y axis label
+#bootstrap: use bootstrap for confidence band? Default TRUE
+#betaboot: array of bootstrap fits (number of parameters x nt.fine x R, where nt.fine is number of points in t.fine and R is number of bootstrap replicates). Can be NULL if bootstrap not done
+#whichparm: which parameter do we want? Ordered as in vcov
+#fittedsplinemodel: object returned by fitZBmodel()
+#ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
+#coefindices: indices of parameter of interest in vcov: only used if not doing bootstrap, can be NULL otherwise (default)
+#Value: plots the coefficient function, with a confidence band
+plotcoefficientfunction <- function(t.fine, xlab, ylab, bootstrap = TRUE, betaboot, whichparm, fittedsplinemodel, ZB_base, coefindices = NULL){
+  par(mfrow = c(1,1))
+  plot(range(t.fine),range(betaboot[whichparm, , ]), type = "n", xlab = xlab, ylab = ylab, cex.lab = 1.5, cex.axis = 1.5 )
+  if(bootstrap){
+    makepolygon95(y = betaboot[whichparm, , ], t.fine = t.fine)
+  } else {
+    make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
+  }
+  lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
+  abline(a = 0, b = 0, lty = "dashed")
+}
+
 # Numerical integration via trapezoidal formula (on a regular grid)
 #copied from code suppied with Talska et al. 2018
 #Arguments: 
@@ -63,7 +87,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #y_pred.l (array, number of values of t.fine x number of observations): predicted clr observations
 #nperm: number of permutations (default 1e3)
 #Falpha: size of test (default 0.05)
-#coef: ####
+##coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
 #axisscores: data frame, variables PC1, PC2 (second and third columns are explanatory variables)
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #t.fine: points at which to evaluate function
@@ -293,19 +317,18 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
 #knots: sequence of knots in compositional splines
 #order: order of splines
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
+#nt.fine: number of points at which to evaluate function
 #t.fine: points at which to evaluate function
-refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, axisscores, knots, order, ZB_base, t.fine){
+#bootstrap (logical, default TRUE): bootstrap the fitted model to get estimate of uncertainty
+#R (default 1000: number of bootstrap replicates)
+#Value: just plots the coefficient functions
+refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, axisscores, knots, order, ZB_base, nt.fine, t.fine, bootstrap = TRUE, R = 1000){
   ninclude <- table(oneyeardf$Site) > nthreshold
   siteorder <- match(sites, names(ninclude)) #order of sites is not alphabetical
   ninclude <- ninclude[siteorder]
   nsitestrim <- sum(ninclude)
   sitestrim <- sites[ninclude]
   axisscorestrim <- axisscores[ninclude, ]
-  
-  print(nsitestrim)
-  print(sitestrim)
-  print(axisscorestrim)
-  
   order <- k + 1
   coeftrim <- matrix(nrow = nsitestrim, ncol = g + k) #Machalova et al 2021, Theorem 1: dimension of the ZB-spline vector space is g + k
   gcvtrim <- array(dim = c(nsitestrim, nalpha))
@@ -335,39 +358,10 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
     yboot <- t(fittedsplinemodeltrim$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
     betaboot[, , i] <- coef(lm(yboot ~ axisscorestrim$PC1 + axisscorestrim$PC2)) 
   }
-  
-  
-  par(mfrow = c(1,1))
-  plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of intercept", cex.lab = 1.5, cex.axis = 1.5 )
-  if(bootstrap){
-    makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
-  } else {
-    make_asymp_polygon(splinemodel = fittedsplinemodeltrim$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodeltrim$comp.spline.clr[, 1])
-  }
-  lines(t.fine, fittedsplinemodeltrim$comp.spline.clr[, 1])
-  abline(a = 0, b = 0, lty = "dashed")
   coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodeltrim$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
-  
-  plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of first axis (PC1) scores", cex.lab = 1.5, cex.axis = 1.5  )
-  if(bootstrap){
-    makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
-  } else {
-    make_asymp_polygon(splinemodel = fittedsplinemodeltrim$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodeltrim$comp.spline.clr[, 2])
-  }
-  lines(t.fine, fittedsplinemodeltrim$comp.spline.clr[, 2])
-  abline(a = 0, b = 0, lty = "dashed")
-  
-  plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of second axis (PC2) scores", cex.lab = 1.5, cex.axis = 1.5  )
-  
-  if(bootstrap){
-    makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
-  } else {
-    make_asymp_polygon(splinemodel = fittedsplinemodeltrim$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodeltrim$comp.spline.clr[, 3])
-  }
-  lines(t.fine, fittedsplinemodeltrim$comp.spline.clr[, 3])
-  abline(a = 0, b = 0, lty = "dashed")
-  
-  
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices)
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 1)
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 2)
 }
 
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
@@ -442,11 +436,11 @@ plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = expression(paste("
 if(bootstrap){
   makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
 } else {
+  coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
   make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
 }
 lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
 abline(a = 0, b = 0, lty = "dashed")
-coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
 
 plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of first axis (PC1) scores", cex.lab = 1.5, cex.axis = 1.5  )
 if(bootstrap){
@@ -489,4 +483,4 @@ residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites,
 
 #refit without sites that have only a small number of colonies
 nthreshold <- 100
-refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, t.fine = t.fine)
+refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, nt.fine = nt.fine, t.fine = t.fine, bootstrap = bootstrap, R = R)
