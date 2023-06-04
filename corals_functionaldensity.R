@@ -217,18 +217,20 @@ residualplot <- function(t.fine, residua, nsites, sites, axisscores){
 #fittedsplinemodel: object returned by fitZBmodel()
 #t.fine: grid of values of log coral area at which to evaluate functions (vector)
 #t_step: step size in t.fine
+#nsites: number of sites
+#textlabel: extra label (default "") giving more information about what was plotted
 #Value: list containing 
 #R.t pointwise R2
 #R2global
 #also plots pointwise and global R2
-computeR2 <- function(fittedsplinemodel, t.fine, t_step){
+computeR2 <- function(fittedsplinemodel, t.fine, t_step, nsites, textlabel = ""){
   #compute pointwise and global R^2
   mean.l <- apply(fittedsplinemodel$smoothedobservations, 1, "mean") #note this equals mean of predictions, provided we have an intercept in the model (Talska code used mean of predictions)
   SSE <- rowSums((fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l)^2)
   SST <- rowSums((fittedsplinemodel$smoothedobservations - mean.l)^2)
   SSF <- rowSums((fittedsplinemodel$y_pred.l - mean.l)^2)
   R.t <- SSF / SST #pointwise R^2
-  plot(t.fine, R.t, xlab = expression(paste("Log coral area"~(cm^2))), ylab = expression(paste("Pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l", cex.lab = 1.5, cex.axis = 1.5)
+  plot(t.fine, R.t, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = expression(paste("Pointwise", ~italic(R)^2)), ylim = c(0, 1), type = "l", cex.lab = 1.5, cex.axis = 1.5)
   
   SST.norm <- 0
   SSF.norm <- 0
@@ -239,6 +241,8 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step){
   R2global <- SSF.norm / SST.norm
   print(paste("global R^2:", R2global, sep = " "))
   legend("topright", bty = "n", cex = 1.5, legend = bquote(paste(italic(R)[global]^2==.(round(R2global, 2)))))
+  axls <- par("usr")
+  text(axls[1] + 0.05 * (axls[2] - axls[1]), axls[4] - 0.05 * (axls[4] - axls[3]), textlabel, pos = 4)
   
   return(list(R.t = R.t, R2global = R2global))
 }
@@ -351,8 +355,6 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   residua  <- fittedsplinemodeltrim$smoothedobservations - fittedsplinemodeltrim$y_pred.l 
   
   # compute bootstrap response Y_boot, R bootstrap repetitions
-  R <- 1000  
-  
   betaboot <- array(dim = c(3, nt.fine, R))
   # generate new dataset, fit model to new dataset, keeping coefs
   for (i in 1:R){
@@ -364,6 +366,8 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices, textlabel = bquote(beta[0]*", sites with more than"~.(nthreshold)~"colonies"))
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 1, textlabel = bquote(beta[1]*", sites with more than"~.(nthreshold)~"colonies"))
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 2, textlabel = bquote(beta[2]*", sites with more than"~.(nthreshold)~"colonies"))
+  print(paste("Excluding sites with fewer than", nthreshold, "colonies:"))
+  Rsquaredtrim <- computeR2(fittedsplinemodel = fittedsplinemodeltrim, t.fine = t.fine, t_step = diff(t.fine)[1], nsites = nsitestrim, textlabel = bquote("Only sites with more than"~.(nthreshold)~"colonies")) #compute and plot pointwise and global R-squared
 }
 
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
@@ -434,36 +438,11 @@ bootstrap <- TRUE #CI by bootstrap? Otherwise by asymptotic method on which we p
 
 
 par(mfrow = c(1,1))
-plot(range(t.fine),range(betaboot[1, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of intercept", cex.lab = 1.5, cex.axis = 1.5 )
-if(bootstrap){
-  makepolygon95(y = betaboot[1, , ], t.fine = t.fine)
-} else {
-  coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
-  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
-}
-lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
-abline(a = 0, b = 0, lty = "dashed")
-
-plot(range(t.fine),range(betaboot[2, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of first axis (PC1) scores", cex.lab = 1.5, cex.axis = 1.5  )
-if(bootstrap){
-  makepolygon95(y = betaboot[2, , ], t.fine = t.fine)
-} else {
-  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 1, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 2])
-}
-lines(t.fine, fittedsplinemodel$comp.spline.clr[, 2])
-abline(a = 0, b = 0, lty = "dashed")
-
-plot(range(t.fine),range(betaboot[3, , ]), type = "n", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr of second axis (PC2) scores", cex.lab = 1.5, cex.axis = 1.5  )
-
-if(bootstrap){
-  makepolygon95(y = betaboot[3, , ], t.fine = t.fine)
-} else {
-  make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices + 2, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 3])
-}
-lines(t.fine, fittedsplinemodel$comp.spline.clr[, 3])
-abline(a = 0, b = 0, lty = "dashed")
-
-Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_step = t_step) #compute and plot pointwise and global R-squared
+coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices + 1)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices + 2)
+Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_step = t_step, nsites = nsites) #compute and plot pointwise and global R-squared
   
 #permutation F-test
 Falpha <- 0.05
@@ -484,5 +463,5 @@ pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, n
 residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites, axisscores = axisscores)
 
 #refit without sites that have only a small number of colonies
-nthreshold <- 100
+nthreshold <- 400
 refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, nt.fine = nt.fine, t.fine = t.fine, bootstrap = bootstrap, R = R)
