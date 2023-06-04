@@ -91,7 +91,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #nperm: number of permutations (default 1e3)
 #Falpha: size of test (default 0.05)
 ##coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
-#axisscores: data frame, variables PC1, PC2 (second and third columns are explanatory variables)
+#explanatory: data frame or matrix of explanatory variables (rows are sites, columns are variables)
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #t.fine: points at which to evaluate function
 #Value: list containing
@@ -102,7 +102,7 @@ Ft <- function(smoothedobservations, y_pred.l){
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
 #FmaxP: randomization P-value based on Fmax (they call it permutation, but we don't look at all possible permutations)
-functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, axisscores, ZB_base, t.fine){
+functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, explanatory, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
   Fobs <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
@@ -396,6 +396,37 @@ bootstrapsplinemodel <- function(fittedsplinemodel, R, nt.fine, nsites, explanat
   return(betaboot)
 }
 
+#permutation F-test
+#Arguments:
+#Falpha: size of test, e.g. 0.05
+#nperm: number of permutations
+#fittedsplinemodel: object returned by fit_ZBmodel()
+#coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
+#ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
+#explanatory: data frame or matrix of explanatory variables (rows are sites, columns are variables)
+#t.fine: points at which to evaluate function
+#Value:
+#Plots the pointwise functional F
+#Ftest, from functionalF(), a list containing
+#Fperm: array (nperm x number of values of t.fine): distribution of pointwise functional F statistics when observations permuted
+#Fobs: vector (length number of values of t.fine): observed pointwise functional F statistics
+#Fcrit vector (length number of values of t.fine): (1 - alpha) quantile of distribution of pointwise functional F statistics when observations permuted
+#Fmaxperm: vector (length nperm) of max values of F(t) in each permutation
+#Fmaxobs: scalar, max observed value of F(t)
+#Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
+#FmaxP: randomization P-value based on Fmax (they call it permutation, but we don't look at all possible permutations)
+doFtest <- function(Falpha, nperm, fittedsplinemodel, coef, ZB_base, explanatory, t.fine){
+  Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, explanatory = explanatory, t.fine = t.fine)
+  par(mfrow = c(1,1))
+  plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = expression(paste("Pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
+  lines(t.fine, Ftest$Fcrit, lty = "dotted")
+  abline(h = Ftest$Fmaxcrit, lty = "dashed")
+  legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
+  print(paste("Randomization Fmax test: observed Fmax = ", Ftest$Fmaxobs, "P =", Ftest$FmaxP, "from", nperm, "randomizations"))
+  legend(x = 0, y = 0.9, bty = "n", cex = 1.5, legend = bquote(paste(italic(P)==.(round(Ftest$FmaxP, 2)))))
+  return(Ftest)
+}
+
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
 
 #import data
@@ -459,14 +490,7 @@ Rsquared <- computeR2(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, t_
 #permutation F-test
 Falpha <- 0.05
 nperm <- 1e4 - 1
-Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, axisscores = axisscores, t.fine = t.fine)
-par(mfrow = c(1,1))
-plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("Log coral area"~(cm^2))), ylab = expression(paste("Pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
-lines(t.fine, Ftest$Fcrit, lty = "dotted")
-abline(h = Ftest$Fmaxcrit, lty = "dashed")
-legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
-print(paste("Randomization Fmax test: observed Fmax = ", Ftest$Fmaxobs, "P =", Ftest$FmaxP, "from", nperm, "randomizations"))
-legend(x = 0, y = 0.9, bty = "n", cex = 1.5, legend = bquote(paste(italic(P)==.(round(Ftest$FmaxP, 2)))))
+Ftest <- doFtest(Falpha = Falpha, nperm = nperm, fittedsplinemodel = fittedsplinemodel, coef = coef, ZB_base = ZB_base, explanatory = axisscores, t.fine = t.fine)
 
 # figure showing predicted size distributions with increasing PC1
 pc1predictions(axisscores = axisscores, fittedsplinemodel = fittedsplinemodel, nt.fine = nt.fine, t.fine = t.fine, t_step = t_step, fname = NA, oldpar = oldpar)
