@@ -248,16 +248,17 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step, nsites, textlabel = "")
   return(list(R.t = R.t, R2global = R2global))
 }
 
-#smooth a set of log areas using compositionalSpline: choose number of histogram bins using Sturges' rule, choose smoothing parameter alpha by generalized cross-validation
+#smooth a set of log areas using compositionalSpline: by default, choose number of histogram bins using Sturges' rule, choose smoothing parameter alpha by generalized cross-validation
 #Arguments:
 #site: name of site
 #oneyeardf: data frame containing variables logArea and Site
 #nalpha: number of values of smoothing parameter alpha (between 0.01 and 1) to try on regular grid (default 30)
 #knots: sequence of knots in compositional splines
 #order: order of splines
+#nc (default NULL): number of bins (if NULL, use Sturges' rule)
 #Value: list containing
-#nc: number of bins selected by Sturges' rule
-#breaks: histogram breaks selected by Sturges' rule
+#nc: number of bins (selected by Sturges' rule if argument nc NULL)
+#breaks: histogram breaks
 #dens.raw: density in each bin (after zero count imputation)
 #t.raw: bin midpoints
 #clr.raw: clr-transformed density in each bin
@@ -265,8 +266,10 @@ computeR2 <- function(fittedsplinemodel, t.fine, t_step, nsites, textlabel = "")
 #alphas: vector of smoothing parameters considered
 #alpha: smoothing parameter value that minimizes gcv score
 #coef: coefficients of ZB-splines, estimated using selected value of alpha
-smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
-  nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
+smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order, nc = NULL){
+  if(is.null(nc)){
+    nc <- nclass.Sturges(oneyeardf$logArea[oneyeardf$Site == site]) #Apply Sturges' rule to data for site i
+  }
   breaks <- seq(from = min(oneyeardf$logArea), to = max(oneyeardf$logArea), length.out = nc + 1)
   classwidth <- diff(breaks)[1] # assuming all classes have the same width, which is the case with nclass.Sturges()
   sitedens <- hist(oneyeardf$logArea[oneyeardf$Site == site], breaks = breaks, plot = FALSE) # get histogram density for just the subset of logArea values from each site
@@ -481,7 +484,7 @@ betaboot <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodel, R = R, n
 residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
 
 par(mfrow = c(1,1))
-coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
+coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables (but won't actually use these: don't have the asymptotic theory for them)
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices)
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices + 1)
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodel, ZB_base = ZB_base, coefindices = coefindices + 2)
@@ -516,4 +519,45 @@ plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC2
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #bleach variable
 Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites) #compute and plot pointwise and global R-squared
+print("With bleaching variable included:")
 Ftestbleach <- doFtest(Falpha = Falpha, nperm = nperm, fittedsplinemodel = fsmbleach, coef = coef, ZB_base = ZB_base, explanatory = bleachexplanatory, t.fine = t.fine)
+
+#check effects of number of bins: fit with min and max from range selected by Sturges' rule over all sites
+nbins <- unlist(lapply(shists, "[[", "nc")) #extracts number of bins at each site
+
+coefmin <- matrix(nrow = nsites, ncol = g + k) #Machalova et al 2021, Theorem 1: dimension of the ZB-spline vector space is g + k
+gcvmin <- array(dim = c(nsites, nalpha))
+alphasmin <- seq(from = 0.1, to = 1, length.out = nalpha)
+selectedalphasmin <- rep(NA, nsites) #smoothing parameter for each site
+shistsmin <- vector(mode = "list", length = nsites) #list of lists: smoothed histogram data for each site
+coefmax <- matrix(nrow = nsites, ncol = g + k) #Machalova et al 2021, Theorem 1: dimension of the ZB-spline vector space is g + k
+gcvmax <- array(dim = c(nsites, nalpha))
+alphasmax <- seq(from = 0.1, to = 1, length.out = nalpha)
+selectedalphasmax <- rep(NA, nsites) #smoothing parameter for each site
+shistsmax <- vector(mode = "list", length = nsites) #list of lists: smoothed histogram data for each site
+for (i in 1:nsites){
+  shistsmin[[i]] <- smoothhistogram(site = sites[i], oneyeardf = oneyeardf, nalpha = nalpha, knots = knots, order = order, nc = min(nbins))
+  gcvmin[i, ] <- shistsmin[[i]]$gcv
+  coefmin[i, ] <- shistsmin[[i]]$coef
+  selectedalphasmin[i] <- shistsmin[[i]]$alpha
+  shistsmax[[i]] <- smoothhistogram(site = sites[i], oneyeardf = oneyeardf, nalpha = nalpha, knots = knots, order = order, nc = max(nbins))
+  gcvmax[i, ] <- shistsmax[[i]]$gcv
+  coefmax[i, ] <- shistsmax[[i]]$coef
+  selectedalphasmax[i] <- shistsmax[[i]]$alpha
+}
+fittedsplinemodelmin <- fitZBmodel(coef = coefmin, explanatory = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+plotfit(fittedsplinemodel = fittedsplinemodelmin, t.fine = t.fine, sites = sites, shists = shistsmin, oneyeardf = oneyeardf)
+fittedsplinemodelmax <- fitZBmodel(coef = coefmax, explanatory = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+plotfit(fittedsplinemodel = fittedsplinemodelmax, t.fine = t.fine, sites = sites, shists = shistsmax, oneyeardf = oneyeardf)
+betaboot <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodel, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
+residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
+
+par(mfrow = c(1,1))
+betabootmin <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodelmin, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
+betabootmax <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodelmax, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 1, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 2, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 3, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 1, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 2, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 3, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
