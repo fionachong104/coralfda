@@ -367,7 +367,7 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
 #oneyeardf: data frame including Site and Year variables
 #Value: vector, with sites ordered as in rows of axisscores, with TRUE if site has Year either 2016b or 2018, FALSE otherwise
 makebleachvariable <- function(axisscores, oneyeardf){
-  postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
+  oneyeardf$postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
   bleachtable <- table(oneyeardf$Site, oneyeardf$postbleach)
   sitepostbleach <- bleachtable[, 2] > 0 #all observations at site were in same year
   siteorder <- match(sites, rownames(bleachtable)) #order of sites is not alphabetical
@@ -483,3 +483,12 @@ bleach <- makebleachvariable(axisscores = axisscores, oneyeardf = oneyeardf)
 bleachexplanatory <- cbind(axisscores, bleach)
 fsmbleach <- fitZBmodel(coef = coef, explanatory = bleachexplanatory, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 plotfit(fittedsplinemodel = fsmbleach, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
+betabootbleach <- bootstrapsplinemodel(fittedsplinemodel = fsmbleach, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = bleachexplanatory)
+residbleach  <- fsmbleach$smoothedobservations - fsmbleach$y_pred.l 
+
+par(mfrow = c(1,1))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 1, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #intercept
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 2, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC1
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC2
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #bleach variable
+Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites) #compute and plot pointwise and global R-squared
