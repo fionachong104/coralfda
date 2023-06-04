@@ -45,17 +45,20 @@ make_asymp_polygon <- function(splinemodel, Z, i, t.fine, f){
 #fittedsplinemodel: object returned by fitZBmodel()
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #coefindices: indices of parameter of interest in vcov: only used if not doing bootstrap, can be NULL otherwise (default)
+#textlabel (default ""): label to add to top left corner of plot
 #Value: plots the coefficient function, with a confidence band
-plotcoefficientfunction <- function(t.fine, xlab, ylab, bootstrap = TRUE, betaboot, whichparm, fittedsplinemodel, ZB_base, coefindices = NULL){
+plotcoefficientfunction <- function(t.fine, xlab, ylab, bootstrap = TRUE, betaboot, whichparm, fittedsplinemodel, ZB_base, coefindices = NULL, textlabel = ""){
   par(mfrow = c(1,1))
   plot(range(t.fine),range(betaboot[whichparm, , ]), type = "n", xlab = xlab, ylab = ylab, cex.lab = 1.5, cex.axis = 1.5 )
   if(bootstrap){
     makepolygon95(y = betaboot[whichparm, , ], t.fine = t.fine)
   } else {
-    make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, 1])
+    make_asymp_polygon(splinemodel = fittedsplinemodel$splinemodel, Z = ZB_base, i = coefindices, t.fine = t.fine, f = fittedsplinemodel$comp.spline.clr[, whichparm])
   }
-  lines(t.fine, fittedsplinemodel$comp.spline.clr[, 1])
+  lines(t.fine, fittedsplinemodel$comp.spline.clr[, whichparm])
   abline(a = 0, b = 0, lty = "dashed")
+  axls <- par("usr")
+  text(axls[1] + 0.05 * (axls[2] - axls[1]), axls[4] - 0.05 * (axls[4] - axls[3]), textlabel, pos = 4, cex = 1.5)
 }
 
 # Numerical integration via trapezoidal formula (on a regular grid)
@@ -351,7 +354,6 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   R <- 1000  
   
   betaboot <- array(dim = c(3, nt.fine, R))
-  
   # generate new dataset, fit model to new dataset, keeping coefs
   for (i in 1:R){
     j <- sample(1:nsitestrim, replace = TRUE) #resample set of residuals 
@@ -359,9 +361,9 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
     betaboot[, , i] <- coef(lm(yboot ~ axisscorestrim$PC1 + axisscorestrim$PC2)) 
   }
   coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodeltrim$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
-  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices)
-  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 1)
-  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 2)
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices, textlabel = bquote(beta[0]*", sites with more than"~.(nthreshold)~"colonies"))
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 1, textlabel = bquote(beta[1]*", sites with more than"~.(nthreshold)~"colonies"))
+  plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 2, textlabel = bquote(beta[2]*", sites with more than"~.(nthreshold)~"colonies"))
 }
 
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
