@@ -183,7 +183,7 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
   }
   par(oldpar, no.readonly = TRUE) #reset to original to get predictable behaviour
   par(mar = c(5, 6, 2, 2))
-  matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "Probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
+  matplot(t.fine, t(pc1gridpred), type = "l", lty = "solid", xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "Probability density", col = pc1colors, cex.lab = 1.5, cex.axis = 1.5)
   par(fig = c(grconvertX(c(7, 8), from = "user", to = "ndc"), grconvertY(c(0.15, 0.3), from = "user", to = "ndc")), mar = c(1, 1, 2, 1), new = TRUE) #coordinates in which we'll plot the color bar image
   image(y = 1:10, z = t(1:10), col = pc1colors, axes = FALSE, xlab = NA, ylab = NA, main = "PC1") #use image to plot the color bar
   axis(4, at = 1:10, las = 2, labels = round(pc1grid, 2), col = NA, col.ticks = NA, cex.axis = 1) #label the colors, rotate the labels and make the axis itself invisible
@@ -287,7 +287,7 @@ smoothhistogram <- function(site, oneyeardf, nalpha = 30, knots, order){
 
 #plot raw and smoothed histograms and predicted densities on clr scale
 #Arguments:
-#fittesplinemodel: object returned by fitZBmodel()
+#fittedsplinemodel: object returned by fitZBmodel()
 #t.fine: grid of log areas on which clr densities evaluated
 #sites: list of site names
 #shists: list of objects returned by smoothhistogram() for each site
@@ -465,3 +465,6 @@ residualplot(t.fine = t.fine, residua = residua, nsites = nsites, sites = sites,
 #refit without sites that have only a small number of colonies
 nthreshold <- 400
 refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, nt.fine = nt.fine, t.fine = t.fine, bootstrap = bootstrap, R = R)
+
+#consider including a pre- vs post-2016 bleaching variable
+oneyear$postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
