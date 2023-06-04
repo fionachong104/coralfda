@@ -105,11 +105,11 @@ Ft <- function(smoothedobservations, y_pred.l){
 functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, explanatory, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
-  Fobs <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
+  Fobs <- fitZBmodel(coef = coef, explanatory = explanatory, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
   Fperm <- array(dim = c(nperm, nt))
   for(i in 1:nperm){
     iperm <- sample(1:N, replace = FALSE)
-    permutedmodel <- fitZBmodel(coef = coef[iperm, ], explanatory = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
+    permutedmodel <- fitZBmodel(coef = coef[iperm, ], explanatory = explanatory, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
     Fperm[i, ] <- permutedmodel$F
   }
   Fcrit <- apply(rbind(Fperm, Fobs), 2, "quantile", 1 - Falpha)
@@ -516,3 +516,4 @@ plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC2
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #bleach variable
 Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites) #compute and plot pointwise and global R-squared
+Ftestbleach <- doFtest(Falpha = Falpha, nperm = nperm, fittedsplinemodel = fsmbleach, coef = coef, ZB_base = ZB_base, explanatory = bleachexplanatory, t.fine = t.fine)
