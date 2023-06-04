@@ -105,11 +105,11 @@ Ft <- function(smoothedobservations, y_pred.l){
 functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.05, coef, axisscores, ZB_base, t.fine){
   N <- dim(smoothedobservations)[2]
   nt <- dim(smoothedobservations)[1]
-  Fobs <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
+  Fobs <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine)$F #observed vector of pointwise functional F statistics
   Fperm <- array(dim = c(nperm, nt))
   for(i in 1:nperm){
     iperm <- sample(1:N, replace = FALSE)
-    permutedmodel <- fitZBmodel(coef = coef[iperm, ], axisscores = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
+    permutedmodel <- fitZBmodel(coef = coef[iperm, ], explanatory = axisscores, ZB_base = ZB_base, nsites = N, t.fine = t.fine) #permute the rows of coefficients, equivalent to permuting the observations
     Fperm[i, ] <- permutedmodel$F
   }
   Fcrit <- apply(rbind(Fperm, Fobs), 2, "quantile", 1 - Falpha)
@@ -352,17 +352,7 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   
   # ZB-spline basis evaluated on the grid "t.fine"
   fittedsplinemodeltrim <- fitZBmodel(coef = coeftrim, explanatory = axisscorestrim, ZB_base = ZB_base, nsites = nsitestrim, t.fine = t.fine)
-
-  residua  <- fittedsplinemodeltrim$smoothedobservations - fittedsplinemodeltrim$y_pred.l 
-  
-  # compute bootstrap response Y_boot, R bootstrap repetitions
-  betaboot <- array(dim = c(3, nt.fine, R))
-  # generate new dataset, fit model to new dataset, keeping coefs
-  for (i in 1:R){
-    j <- sample(1:nsitestrim, replace = TRUE) #resample set of residuals 
-    yboot <- t(fittedsplinemodeltrim$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-    betaboot[, , i] <- coef(lm(yboot ~ axisscorestrim$PC1 + axisscorestrim$PC2)) 
-  }
+  betaboot <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodeltrim, R = R, nt.fine = nt.fine, nsites = nsitestrim, explanatory = axisscorestrim)
   coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodeltrim$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 1, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices, textlabel = bquote(beta[0]*", sites with more than"~.(nthreshold)~"colonies"))
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 2, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 1, textlabel = bquote(beta[1]*", sites with more than"~.(nthreshold)~"colonies"))
@@ -451,27 +441,13 @@ t.fine <- seq(from = min(knots), to = max(knots), length.out = nt.fine)
 t_step <- diff(t.fine)[1]
 ZB_base <- ZBsplineBasis(t = t.fine, knots = knots, order = order)$ZBsplineBasis
 
-fittedsplinemodel <- fitZBmodel(coef = coef, axisscores = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+fittedsplinemodel <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
 plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
 
 bootstrap <- TRUE #CI by bootstrap? Otherwise by asymptotic method on which we probably can't rely, although results similar
-
-  # Bootstrap
-  # functional residuals
-  residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
-  
-  # compute bootstrap response Y_boot, R bootstrap repetitions
-  R <- 1000  
-  
-  betaboot <- array(dim = c(3, nt.fine, R))
-  
-  # generate new dataset, fit model to new dataset, keeping coefs
-  for (i in 1:R){
-    j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
-    yboot <- t(fittedsplinemodel$y_pred.l + residua[, j]) # generate new dataset, fit model, keeping coefs
-    betaboot[, , i] <- coef(lm(yboot ~ axisscores$PC1 + axisscores$PC2)) 
-  }
-
+R <- 1e3
+betaboot <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodel, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
+residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l 
 
 par(mfrow = c(1,1))
 coefindices <- seq(from = 1, to = dim(vcov(fittedsplinemodel$splinemodel))[1], by = 3) #every third row/column in covariance matrix of parameters is intercept, because we have intercept and two explanatory variables
