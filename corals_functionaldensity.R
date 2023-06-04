@@ -123,7 +123,7 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.
 #fit a ZB-spline model
 #Arguments:
 #coef (matrix, sites x dimension of spline space) of ZB-spline coefficients of observations
-#axisscores: data frame, variables PC1, PC2 (second and third columns are explanatory variables)
+#explanatory: data frame or matrix of explanatory variables at each site
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #nsites: number of sites
 #t.fine: vector, values of log colony area at which to evaluate splines
@@ -133,18 +133,19 @@ functionalF <- function(smoothedobservations, y_pred.l, nperm = 1e3, Falpha = 0.
 #smoothedobservations: matrix (points in t.fine x sites) of clr smoothed observations
 #F: vector of pointwise F statistics
 #comp.spline.clr: matrix (points in t.fine x 3) of coefficient functions (intercept, PC1, PC2)
-#B: matrix (3 x dimension of spline space) of regression coefficients
+#B: matrix (# explanatory x dimension of spline space) of regression coefficients
 #splinemodel: fitted lm object
-fitZBmodel <- function(coef, axisscores, ZB_base, nsites, t.fine){
-  splinemodel <- lm(coef ~ axisscores$PC1 + axisscores$PC2)
-  B <-  coef(splinemodel)  
-  comp.spline.clr <- ZB_base %*% t(B)
-  X <- as.matrix(cbind(rep(1, nsites), axisscores[, 1:2]))
-  y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
-  smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
-  F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
-  return(list(y_pred.l = y_pred.l, smoothedobservations = smoothedobservations, F = F, comp.spline.clr = comp.spline.clr, B = B, splinemodel = splinemodel))
-}
+fitZBmodel <- function(coef, explanatory, ZB_base, nsites, t.fine){
+    explanatory <- as.matrix(explanatory)
+    splinemodel <- lm(coef ~ explanatory)
+    B <-  coef(splinemodel)  
+    comp.spline.clr <- ZB_base %*% t(B)
+    X <- cbind(1, explanatory)
+    y_pred.l <- comp.spline.clr %*% t(X) #clr predictions
+    smoothedobservations <- ZB_base %*% t(coef) # smoothed clr observations
+    F <- Ft(smoothedobservations = smoothedobservations, y_pred.l = y_pred.l)
+    return(list(y_pred.l = y_pred.l, smoothedobservations = smoothedobservations, F = F, comp.spline.clr = comp.spline.clr, B = B, splinemodel = splinemodel))
+  }
 
 # Inverse of clr transformation from Talska et al 2018
 # Input: z = grid of point defining the abscissa 
