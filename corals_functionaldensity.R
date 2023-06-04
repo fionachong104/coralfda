@@ -385,6 +385,27 @@ makebleachvariable <- function(axisscores, oneyeardf){
   return(sitepostbleach)
 }
 
+#create array of bootstrapped coefficients
+#Arguments:
+#fittedsplinemodel: object returned by fitZBmodel()
+#R: number of bootstrap iterations
+#nt.fine: number of points at which to evaluate functions
+#nsites: number of sites
+#explanatory: data frame or matrix of explanatory variables (rows are sites, columns are variables)
+#Value:
+#array (number of explanatory variables + 1 x nt.fine x R) of bootstrapped coefficients
+bootstrapsplinemodel <- function(fittedsplinemodel, R, nt.fine, nsites, explanatory){
+  resids  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l
+  nvars <- dim(explanatory)[2]
+  betaboot <- array(dim = c(nvars + 1, nt.fine, R))
+  for (i in 1:R){# generate new dataset, fit model to new dataset, keeping coefs
+    j <- sample(1:nsites, replace = TRUE) #resample set of residuals 
+    yboot <- t(fittedsplinemodel$y_pred.l + resids[, j]) # generate new dataset, fit model, keeping coefs
+    betaboot[, , i] <- coef(lm(yboot ~ as.matrix(explanatory))) 
+  }
+  return(betaboot)
+}
+
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
 
 #import data
@@ -482,6 +503,7 @@ nthreshold <- 400
 refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, nt.fine = nt.fine, t.fine = t.fine, bootstrap = bootstrap, R = R)
 
 #consider including a pre- vs post-2016 bleaching variable
-oneyeardf$postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
-fsmbleach <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
-plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
+bleach <- makebleachvariable(axisscores = axisscores, oneyeardf = oneyeardf)
+bleachexplanatory <- cbind(axisscores, bleach)
+fsmbleach <- fitZBmodel(coef = coef, explanatory = bleachexplanatory, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+plotfit(fittedsplinemodel = fsmbleach, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
