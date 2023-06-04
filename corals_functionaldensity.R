@@ -351,7 +351,7 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   }
   
   # ZB-spline basis evaluated on the grid "t.fine"
-  fittedsplinemodeltrim <- fitZBmodel(coef = coeftrim, axisscores = axisscorestrim, ZB_base = ZB_base, nsites = nsitestrim, t.fine = t.fine)
+  fittedsplinemodeltrim <- fitZBmodel(coef = coeftrim, explanatory = axisscorestrim, ZB_base = ZB_base, nsites = nsitestrim, t.fine = t.fine)
 
   residua  <- fittedsplinemodeltrim$smoothedobservations - fittedsplinemodeltrim$y_pred.l 
   
@@ -369,6 +369,20 @@ refitwithoutsmallsites <- function(nthreshold, oneyeardf, g, k, nalpha, sites, a
   plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betaboot, whichparm = 3, fittedsplinemodel = fittedsplinemodeltrim, ZB_base = ZB_base, coefindices = coefindices + 2, textlabel = bquote(beta[2]*", sites with more than"~.(nthreshold)~"colonies"))
   print(paste("Excluding sites with fewer than", nthreshold, "colonies:"))
   Rsquaredtrim <- computeR2(fittedsplinemodel = fittedsplinemodeltrim, t.fine = t.fine, t_step = diff(t.fine)[1], nsites = nsitestrim, textlabel = bquote("Only sites with more than"~.(nthreshold)~"colonies")) #compute and plot pointwise and global R-squared
+}
+
+#categorize each site as pre- or post-bleaching
+#Arguments:
+#axisscores: PC1 and PC2 of environmental variables at each site
+#oneyeardf: data frame including Site and Year variables
+#Value: vector, with sites ordered as in rows of axisscores, with TRUE if site has Year either 2016b or 2018, FALSE otherwise
+makebleachvariable <- function(axisscores, oneyeardf){
+  postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
+  bleachtable <- table(oneyeardf$Site, oneyeardf$postbleach)
+  sitepostbleach <- bleachtable[, 2] > 0 #all observations at site were in same year
+  siteorder <- match(sites, rownames(bleachtable)) #order of sites is not alphabetical
+  sitepostbleach <- sitepostbleach[siteorder]
+  return(sitepostbleach)
 }
 
 oldpar <- par(no.readonly = TRUE) #default par settings (restore them to get predictable behaviour)
@@ -468,4 +482,6 @@ nthreshold <- 400
 refitwithoutsmallsites(nthreshold = nthreshold, oneyeardf = oneyeardf, g = g, k = k, nalpha = nalpha, sites = sites, axisscores = axisscores, knots = knots, order = order, ZB_base = ZB_base, nt.fine = nt.fine, t.fine = t.fine, bootstrap = bootstrap, R = R)
 
 #consider including a pre- vs post-2016 bleaching variable
-oneyear$postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
+oneyeardf$postbleach <- oneyeardf$Year == "2016b" | oneyeardf$Year == "2018"
+fsmbleach <- fitZBmodel(coef = coef, explanatory = axisscores, ZB_base = ZB_base, nsites = nsites, t.fine = t.fine)
+plotfit(fittedsplinemodel = fittedsplinemodel, t.fine = t.fine, sites = sites, shists = shists, oneyeardf = oneyeardf)
