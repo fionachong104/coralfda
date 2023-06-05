@@ -408,6 +408,7 @@ bootstrapsplinemodel <- function(fittedsplinemodel, R, nt.fine, nsites, explanat
 #ZB_base: matrix (points in t.fine x splines): basis for ZB-splines evaluated at points in t.fine
 #explanatory: data frame or matrix of explanatory variables (rows are sites, columns are variables)
 #t.fine: points at which to evaluate function
+#textlabel: extra label for plot (default "")
 #Value:
 #Plots the pointwise functional F
 #Ftest, from functionalF(), a list containing
@@ -418,7 +419,7 @@ bootstrapsplinemodel <- function(fittedsplinemodel, R, nt.fine, nsites, explanat
 #Fmaxobs: scalar, max observed value of F(t)
 #Fmaxcrit: (1 - alpha)-quantile of distribution of max functional F statistics when observations permuted
 #FmaxP: randomization P-value based on Fmax (they call it permutation, but we don't look at all possible permutations)
-doFtest <- function(Falpha, nperm, fittedsplinemodel, coef, ZB_base, explanatory, t.fine){
+doFtest <- function(Falpha, nperm, fittedsplinemodel, coef, ZB_base, explanatory, t.fine, textlabel = ""){
   Ftest <- functionalF(smoothedobservations = fittedsplinemodel$smoothedobservations, y_pred.l = fittedsplinemodel$y_pred.l, nperm = nperm, Falpha = Falpha, coef = coef, ZB_base = ZB_base, explanatory = explanatory, t.fine = t.fine)
   par(mfrow = c(1,1))
   plot(t.fine, Ftest$Fobs, type = "l", xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = expression(paste("Pointwise", ~italic(F))), ylim = c(0, max(c(Ftest$Fobs, Ftest$Fmaxcrit))), cex.lab = 1.5, cex.axis = 1.5)
@@ -427,6 +428,8 @@ doFtest <- function(Falpha, nperm, fittedsplinemodel, coef, ZB_base, explanatory
   legend(x = 6, y = 0.9, bty = "n", lty = c("solid", "dotted", "dashed"), legend = c("observed", as.expression(bquote(paste("pointwise ", .(Falpha), " critical value"))), as.expression(bquote(paste("maximum ", .(Falpha), " critical value")))))
   print(paste("Randomization Fmax test: observed Fmax = ", Ftest$Fmaxobs, "P =", Ftest$FmaxP, "from", nperm, "randomizations"))
   legend(x = 0, y = 0.9, bty = "n", cex = 1.5, legend = bquote(paste(italic(P)==.(round(Ftest$FmaxP, 2)))))
+  axls <- par("usr")
+  text(axls[1] + 0.05 * (axls[2] - axls[1]), axls[4] - 0.05 * (axls[4] - axls[3]), textlabel, pos = 4)
   return(Ftest)
 }
 
@@ -514,12 +517,12 @@ betabootbleach <- bootstrapsplinemodel(fittedsplinemodel = fsmbleach, R = R, nt.
 residbleach  <- fsmbleach$smoothedobservations - fsmbleach$y_pred.l 
 
 par(mfrow = c(1,1))
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 1, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #intercept
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 2, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC1
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #PC2
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL) #bleach variable
-Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites) #compute and plot pointwise and global R-squared
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 1, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[0]~"with bleaching variable included")) #intercept
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 2, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[1]~"with bleaching variable included")) #PC1
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[2]~"with bleaching variable included")) #PC2
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[3]*", bleaching variable")) #bleach variable
 print("With bleaching variable included:")
+Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites, textlabel = "with bleaching variable") #compute and plot pointwise and global R-squared
 Ftestbleach <- doFtest(Falpha = Falpha, nperm = nperm, fittedsplinemodel = fsmbleach, coef = coef, ZB_base = ZB_base, explanatory = bleachexplanatory, t.fine = t.fine)
 
 #check effects of number of bins: fit with min and max from range selected by Sturges' rule over all sites
@@ -555,9 +558,9 @@ residua  <- fittedsplinemodel$smoothedobservations - fittedsplinemodel$y_pred.l
 par(mfrow = c(1,1))
 betabootmin <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodelmin, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
 betabootmax <- bootstrapsplinemodel(fittedsplinemodel = fittedsplinemodelmax, R = R, nt.fine = nt.fine, nsites = nsites, explanatory = axisscores)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 1, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 2, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 3, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 1, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 2, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
-plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 3, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL)
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 1, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[0]~"with"~.(min(nbins))~"bins at all sites"))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 2, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[1]~"with"~.(min(nbins))~"bins at all sites"))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmin, whichparm = 3, fittedsplinemodel = fittedsplinemodelmin, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[2]~"with"~.(min(nbins))~"bins at all sites"))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 1, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[0]~"with"~.(max(nbins))~"bins at all sites"))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 2, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[1]~"with"~.(max(nbins))~"bins at all sites"))
+plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootmax, whichparm = 3, fittedsplinemodel = fittedsplinemodelmax, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[2]~"with"~.(max(nbins))~"bins at all sites"))
