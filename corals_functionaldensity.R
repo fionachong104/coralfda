@@ -522,7 +522,7 @@ plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 3, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[2]~"with bleaching variable included")) #PC2
 plotcoefficientfunction(t.fine = t.fine, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr(density)", bootstrap = bootstrap, betaboot = betabootbleach, whichparm = 4, fittedsplinemodel = fsmbleach, ZB_base = ZB_base, coefindices = NULL, textlabel = bquote(beta[3]*", bleaching variable")) #bleach variable
 print("With bleaching variable included:")
-Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites, textlabel = "with bleaching variable") #compute and plot pointwise and global R-squared
+Rsquaredbleach <- computeR2(fittedsplinemodel = fsmbleach, t.fine = t.fine, t_step = t_step, nsites = nsites, textlabel = "with bleaching variable included") #compute and plot pointwise and global R-squared
 Ftestbleach <- doFtest(Falpha = Falpha, nperm = nperm, fittedsplinemodel = fsmbleach, coef = coef, ZB_base = ZB_base, explanatory = bleachexplanatory, t.fine = t.fine, textlabel = "with bleaching variable included")
 
 #check effects of number of bins: fit with min and max from range selected by Sturges' rule over all sites
