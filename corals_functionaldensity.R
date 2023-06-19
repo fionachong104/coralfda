@@ -62,7 +62,7 @@ plotcoefficientfunction <- function(t.fine, xlab, ylab, bootstrap = TRUE, betabo
 }
 
 # Numerical integration via trapezoidal formula (on a regular grid)
-#copied from code suppied with Talska et al. 2018
+#copied from code supplied with Talska et al. 2018
 #Arguments: 
 #step: step size for grid
 #y: function to be integrated, evaluated at the grid points
