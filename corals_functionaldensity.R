@@ -202,7 +202,7 @@ pc1predictions <-  function(axisscores, fittedsplinemodel, nt.fine, t.fine, t_st
 # axisscores = PCA axis scores
 residualplot <- function(t.fine, residua, nsites, sites, axisscores){
   colorfunc <- colorRampPalette(brewer.pal(8, "RdBu"))
-  matplot(t.fine, residua, type = "l", lty = "solid", xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr residuals", cex.lab = 1.5, cex.axis = 1.5, col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
+  matplot(t.fine, residua, type = "l", lty = "solid", xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr residuals", cex.lab = 1.5, cex.axis = 1.5, col = colorfunc(8)[findInterval(axisscores$PC1,seq(from = min(axisscores$PC1),to = max(axisscores$PC1),length.out = 8))])
   for(i in 1:nsites){
     text(t.fine[1],
       residua[1,i],sites[i],pos = 4, cex = 0.9)
@@ -302,7 +302,7 @@ plotfit <- function(fittedsplinemodel, t.fine, sites, shists, oneyeardf){
   par(mar = c(4, 5, 2, 2))
   yl <- range(range(fittedsplinemodel$smoothedobservations), range(fittedsplinemodel$y_pred.l))
   for (i in 1:nsites){
-    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = expression(paste("Log coral area"~(cm^2))), ylab = "clr density", cex.main = 1.5, cex.lab = 1.5, cex.axis = 1.5) #smoothed raw data
+    plot(t.fine, fittedsplinemodel$smoothedobservations[, i], type = "l", main = paste(letters[i], ": ", sites[i], sep = ""), ylim = yl, xlab = expression(paste("log(coral area/"*cm^2*")")), ylab = "clr density", cex.main = 1.5, cex.lab = 1.5, cex.axis = 1.5) #smoothed raw data
     lines(t.fine, fittedsplinemodel$y_pred.l[, i], lty = "dashed") #predicted
     points(shists[[i]]$t.raw, shists[[i]]$clr.raw, pch = 16, col = adjustcolor("black", 0.4)) #raw clr densities in bins
     if(i == 1){
